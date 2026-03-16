@@ -129,8 +129,8 @@ kotlin {
                 implementation("org.jetbrains.kotlinx:kotlinx-io-core:0.9.1")
 
                 // SQLite
-                implementation("androidx.sqlite:sqlite:2.5.1")
-                implementation("androidx.sqlite:sqlite-bundled:2.5.1")
+                implementation("androidx.sqlite:sqlite:2.6.2")
+                implementation("androidx.sqlite:sqlite-bundled:2.6.2")
 
                 // HTTP client
                 implementation("io.ktor:ktor-client-core:3.5.0")
