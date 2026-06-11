@@ -68,7 +68,7 @@ fun <T> OsmQuestFormContainer(
                 questType.applyAnswerTo(action.value, changesBuilder, geometry, element.timestampEdited)
                 val changes = changesBuilder.create()
                 //UpdateElementTagsAction(element, changes)
-                TODO
+                TODO()
             }
         }
     }
@@ -90,14 +90,14 @@ fun <T> OsmQuestFormContainer(
     if (confirmSplitWay) {
         ConfirmationDialog(
             onDismissRequest = { confirmSplitWay = false },
-            onConfirmed = { TODO },
+            onConfirmed = { TODO() },
             text = { Text(stringResource(Res.string.quest_split_way_description)) }
         )
     }
     if (confirmMoveNode) {
         ConfirmationDialog(
             onDismissRequest = { confirmMoveNode = false },
-            onConfirmed = { TODO },
+            onConfirmed = { TODO() },
             text = { Text(stringResource(Res.string.quest_move_node_message)) }
         )
     }
@@ -110,16 +110,16 @@ fun <T> OsmQuestFormContainer(
                         val builder = StringMapChangesBuilder(element.tags)
                         answer.feature.applyReplacePlaceTo(builder)
                         UpdateElementTagsAction(element, builder.create())
-                        TODO
+                        TODO()
                     }
                     ShopTypeAnswer.IsShopVacant -> {
                         val vacantShop = featureDictionary.getPlaceAsDisused(element, country = countryInfo.countryOrSubdivisionCode)
                         val builder = StringMapChangesBuilder(element.tags)
                         vacantShop.applyReplacePlaceTo(builder)
                         UpdateElementTagsAction(element, builder.create())
-                        TODO
+                        TODO()
                     }
-                    ShopTypeAnswer.LeaveNote -> composeNote()
+                    ShopTypeAnswer.LeaveNote -> TODO()
                 }
             },
             featureDictionary = featureDictionary,
@@ -130,8 +130,8 @@ fun <T> OsmQuestFormContainer(
     if (confirmDeletePoi) {
         ConfirmDeleteDialog(
             onDismissRequest = { confirmDeletePoi = false },
-            onConfirmDelete = { TODO },
-            onLeaveNote = { TODO }
+            onConfirmDelete = { TODO() },
+            onLeaveNote = { TODO() }
         )
     }
 }
