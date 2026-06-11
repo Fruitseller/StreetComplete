@@ -11,7 +11,9 @@ open class CopyStringsTask : DefaultTask() {
 
     @TaskAction
     fun run() {
-        val stringRegex = Regex("<string name=\"([a-zA-Z0-9_]+)\">(.*)</string>")
+        // DOT_MATCHES_ALL + lazy quantifier so that multi-line strings are also
+        // matched and thus quoted — otherwise aapt2 fails on unescaped apostrophes
+        val stringRegex = Regex("<string name=\"([a-zA-Z0-9_]+)\">(.*?)</string>", RegexOption.DOT_MATCHES_ALL)
         for (dir in File(sourceDir).listFiles().orEmpty()) {
             if (dir.isDirectory) {
                 val stringsFile = File(dir, "strings.xml")
