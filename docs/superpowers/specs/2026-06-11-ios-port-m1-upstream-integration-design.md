@@ -1,7 +1,8 @@
 # iOS-Port — M1: Upstream-WIP-Integration (Design)
 
 **Datum:** 2026-06-11
-**Status:** Genehmigt von Piotr am 2026-06-11
+**Status:** Genehmigt von Piotr am 2026-06-11 · M1 abgeschlossen am 2026-06-14 ·
+Upstream-Re-Sync am 2026-06-14 (Branch `ios-port`, Backlog: `docs/superpowers/ios-port-backlog.md`)
 
 ## Kontext
 
