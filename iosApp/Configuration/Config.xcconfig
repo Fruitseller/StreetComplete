@@ -1,7 +1,12 @@
-TEAM_ID=
+TEAM_ID=44Q5Q437K2
 
 PRODUCT_NAME=StreetComplete
-PRODUCT_BUNDLE_IDENTIFIER=org.example.project.StreetComplete(TEAM_ID)
+// The Kotlin framework's Swift module is named "StreetComplete" (Gradle baseName).
+// Give the app target a different module name so `import StreetComplete` in Swift
+// resolves to the framework instead of the app's own module (avoids a name clash
+// that hides the framework's symbols, e.g. MainViewControllerKt).
+PRODUCT_MODULE_NAME=iosApp
+PRODUCT_BUNDLE_IDENTIFIER=de.westnordost.streetcomplete.ios
 
 CURRENT_PROJECT_VERSION=1
 MARKETING_VERSION=0.1
