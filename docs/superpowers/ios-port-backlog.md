@@ -1,4 +1,71 @@
-# iOS-Port Backlog (Stand: M1 + Re-Sync + M2, 2026-06-14)
+# iOS-Port Backlog (Stand: M1 + Re-Sync + M2 + M3a, 2026-06-14)
+
+## ✅ M3a ABGESCHLOSSEN — iOS-Navigationsgerüst + Menü-Screens (ohne Karte)
+
+Die iOS-App rendert jetzt ein geteiltes commonMain-`MainMenuNavHost` (Menü → About / Settings /
+User-Login) statt nur der nackten AboutScreen. Commits auf `ios-port` (Range `9e3b527de..e445caa68`):
+`47be236` (M3a.1 AboutNavHost), `203399134` (M3a.2 vollständiger Koin-Graph + Stubs), `7c6b1a6`
+(VisibleQuestsSource-Binding nach commonMain), `7042c7c` (M3a.3 Menü-Shell + Settings; enthält auch
+das M3a-Plandokument), `ef3d444` (M3a.4 User + OAuth-Login), `e445caa` (Fix iOS-compose-resources-Pfad).
+
+**Was funktioniert (Simulator-verifiziert, iPhone 16 Pro sim — durch erzwungenes Rendern je Screen):**
+- Menü → About (Changelog/Credits/Privacy/Logs/Tutorial), Settings, User/Login — erreichbar.
+- Settings-Liste rendert (SettingsViewModel + QuestTypeRegistry mit ~190 Quests aufgelöst).
+- Settings → Quest-Auswahl rendert (CountryBoundaries aus `boundaries.ser`, FeatureDictionary aus
+  `osmfeatures`, QuestTypeRegistry — alle aus dem App-Bundle aufgelöst).
+- Login-Screen rendert (UserViewModel/LoginViewModel; multiplatform-WebView).
+
+**iOS-Koin-Graph:** `InitKoin.kt` lädt jetzt den vollständigen commonMain-Modulsatz (gespiegelt von
+Android `StreetCompleteApplication`), MINUS die 4 androidMain-only Module (appModule, mainModule,
+questModule, androidModule), PLUS `iosModule` + `iosControllersModule`. `iosControllersModule` =
+No-op-Stubs für MapTilesDownloader/UploadController/DownloadController/ChangesetAutoCloser (nur
+MapTilesDownloader wird tatsächlich erreicht: SettingsViewModel→Cleaner). `InternetConnectionState`
+bewusst NICHT gestubt (von iOS unerreichbar — nur androidMain-Code nutzt es). `VisibleQuestsSource`-
+Binding von androidMain `questModule` nach commonMain `visibleQuestsModule` verschoben (auf Android
+verhaltensneutral, auf iOS jetzt auflösbar) — sonst Crash beim Öffnen von Settings
+(MessagesSource→VisibleQuestsSource).
+
+**Source-Set-Moves (androidMain → commonMain, per git mv):** SettingsScreen, SettingsNavHost,
+EditTypePresetsScreen, EditTypePresetRow, UrlConfigQRCodeDialog, UserScreen, UserNavHost, LoginScreen.
+`koinViewModel`-Import dabei von `org.koin.androidx.compose` auf `org.koin.compose.viewmodel`
+umgestellt. `SettingsActivity`/`UserActivity` bleiben in androidMain (Android-Einstiegspunkte;
+androidMain darf commonMain referenzieren).
+
+**Wichtiger Fix (`e445caa`):** `MetadataModule.ios.kt` las `boundaries.ser`/`osmfeatures` unter
+`resourcePath/compose-resources/files/`, tatsächlich liegen compose-resources aber unter
+`compose-resources/composeResources/<packageOfResClass>/files/` (hier
+`de.westnordost.streetcomplete.resources`). Bestand seit M2, fiel erst auf, als ein
+metadaten-abhängiger Screen (Quest-Auswahl) erreichbar wurde → FileNotFoundException/Crash.
+**Lehre:** compose-resources, die NICHT über `Res` sondern als rohe Dateien (kotlinx.io) gelesen
+werden, brauchen den vollen verschachtelten Pfad.
+
+**Offene Punkte / für M4 vorgemerkt:**
+- **OAuth-Login-Happy-Path NICHT verifiziert:** Login-Screen rendert, aber der WebView-Round-Trip
+  (OSM-Authorize → `streetcomplete://oauth`-Interception → Token) wurde nicht getestet (braucht
+  Interaktion + Netz + echtes OSM-Login → manueller Gerätetest). Die Interception-Logik ist bereits
+  multiplatform (compose-webview-multiplatform 2.0.3, in `LoginScreen.kt` unverändert).
+- **About → Logs ist auf iOS quasi leer:** kein DatabaseLogger-Sink auf iOS registriert (nur
+  IosLogger → Konsole). Screen rendert, zeigt aber kaum Einträge. Einfacher Follow-up: in
+  `initKoin()` einen iOS-DatabaseLogger zu `Log.instances` hinzufügen (DatabaseLogger ist commonMain).
+- **Toast-Feedback verloren:** LoginScreen (Login-Fehler) und UrlConfigQRCodeDialog (URL kopiert)
+  hatten Android-Toasts; entfernt + per TODO markiert, da es noch keine multiplatform Toast/Snackbar-
+  Utility gibt (Upstream hat dasselbe TODO). Wiederherstellen, sobald eine existiert.
+- **Nach Login springt UserNavHost nicht automatisch weiter:** `startDestination` wird einmalig
+  ausgewertet; nach erfolgreichem Login bleibt der Spinner bis man zurück ins Menü geht (vorbestehend,
+  auf iOS sichtbarer).
+- **Gerätedeployment des M3a-Builds steht aus** (Personal-Team-Profil läuft 2026-06-21 ab).
+- ShowQuestForms-Debug-Pfad ist auf iOS via `BuildConfig.DEBUG=false` ausgeblendet — nicht erreichbar.
+
+**Restrisiko „verdrahtet aber nicht interaktiv getestet" (Reihenfolge nach Risiko):** About→Logs
+(leer, FileKit-Share ungetestet) · Settings→Presets→QR-Share-Dialog (qrose + UrlConfig ungetestet) ·
+User-Tabs nach Login (Avatar-Download; nur per echtem Login erreichbar) · Overlay/Language/Messages-
+Auswahl (einfache Listen, geringes Risiko).
+
+**Nächster Schritt:** maplibre-compose-Spike (Version gegen Compose 1.10.3 validieren, triviale Karte
+auf iOS rendern) → dann M3b-Detailplan (Karte + Location-Dot, vom Nutzer so gewählt). Siehe
+`docs/superpowers/plans/2026-06-14-ios-port-m3a-nav-and-menu-screens.md` Abschnitt „Bridge to M3b".
+
+---
 
 ## ✅ M2 ABGESCHLOSSEN — App läuft auf dem iPhone 16 Pro
 
