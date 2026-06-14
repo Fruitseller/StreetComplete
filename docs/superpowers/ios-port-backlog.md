@@ -1,3 +1,42 @@
+# iOS-Port Backlog (Stand: M1 + Re-Sync + M2, 2026-06-14)
+
+## ✅ M2 ABGESCHLOSSEN — App läuft auf dem iPhone 16 Pro
+
+Die gebaute StreetComplete-App startet auf physischem iPhone 16 Pro (iOS 26.5) und
+rendert die echte AboutScreen. Meilensteine M2.0–M2.4 committet auf `ios-port`.
+
+**iOS-Build/Run-Cheatsheet:**
+- **Simulator:** `xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -sdk iphonesimulator
+  -destination 'platform=iOS Simulator,id=5B7C16A4-2C11-4E0C-9549-42F7AC648438'
+  -derivedDataPath build/ios build` → `xcrun simctl install/launch …`
+- **Gerät:** `xcodebuild … -destination 'platform=iOS,id=00008140-000228491A33001C'
+  -derivedDataPath build/ios-device -allowProvisioningUpdates build`
+  → `xcrun devicectl device install app --device 83B473E9-A697-567F-BDF4-27B28D49D0B5 <…>.app`
+  → `xcrun devicectl device process launch --device 83B473E9-… de.westnordost.streetcomplete.ios`
+- **Signing:** TEAM_ID `2DPUG448BC` (Account „Piotr Großmann", in Xcode angemeldet); NICHT das alte
+  Keychain-Team `44Q5Q437K2`. Free Personal Team → Profil **läuft nach 7 Tagen ab** (neu deployen).
+- **Einmalig pro Gerät:** Entwicklerzertifikat am iPhone vertrauen (Einstellungen → Allgemein →
+  VPN & Geräteverwaltung).
+- **Wichtiger Iterations-Fallstrick:** Xcode relinkt die App NICHT, wenn sich nur der Inhalt des
+  statischen Frameworks ändert → vor jedem Build `rm -rf build/ios` (bzw. `build/ios-device`).
+  Dauerhafte Lösung noch offen (Framework als Input-Dependency des Link-Steps deklarieren).
+
+**Auf iOS gelöste Fallstricke (für künftige Arbeit):**
+- Swift-Modulnamen-Kollision: `PRODUCT_MODULE_NAME=iosApp` in Config.xcconfig, damit
+  `import StreetComplete` aufs Framework (nicht aufs App-Modul) auflöst.
+- `NSLog` mit `%@`-Kotlin-String-Varargs crasht Kotlin/Native (EXC_BAD_ACCESS) → `IosLogger`
+  nutzt `println`.
+- `BundledSQLiteDriver` (commonMain via sqlite-bundled) öffnet die DB auf iOS problemlos
+  (31 Tabellen, WAL).
+
+**Für M3+ vorgemerkt (noch nicht geladen):** Nur `iosModule` + `aboutScreenPlatformModule` sind im
+iOS-Koin-Graph. Beim Anbinden weiterer Screens (Settings/User/EditHistory) die jeweiligen
+commonMain-Module laden und für `UploadController`/`DownloadController`/`MapTilesDownloader`/
+`ChangesetAutoCloser`/`InternetConnectionState` iOS-No-op-Stubs ergänzen (sonst Crash bei get()).
+Karte = eigener großer Block (maplibre-compose, PR #6352) — M3.
+
+---
+
 # iOS-Port Backlog (Stand: M1 + Re-Sync, 2026-06-14)
 
 ## Integrierte Upstream-Stände (Snapshot nach Re-Sync 2026-06-14)
