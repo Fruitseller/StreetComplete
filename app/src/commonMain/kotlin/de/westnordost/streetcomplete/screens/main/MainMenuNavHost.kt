@@ -44,7 +44,7 @@ fun MainMenuNavHost() {
             )
         }
         composable(MainMenuDestination.Map) {
-            MapScreen()
+            MapScreen(onClickBack = ::goBack)
         }
         composable(MainMenuDestination.About) {
             AboutNavHost(onClickBack = ::goBack)

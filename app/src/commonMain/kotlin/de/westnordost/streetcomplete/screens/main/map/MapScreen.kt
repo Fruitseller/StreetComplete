@@ -1,8 +1,14 @@
 package de.westnordost.streetcomplete.screens.main.map
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.material.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import de.westnordost.streetcomplete.ui.common.BackIcon
 import org.maplibre.compose.camera.CameraPosition
 import org.maplibre.compose.camera.rememberCameraState
 import org.maplibre.compose.map.MaplibreMap
@@ -12,18 +18,24 @@ import org.maplibre.spatialk.geojson.Position
 /** First iOS map (M3b.1): a real vector map reachable from the menu. Online-only for now;
  *  pins/overlays/location come in later M3b increments. */
 @Composable
-fun MapScreen() {
+fun MapScreen(onClickBack: () -> Unit) {
     val cameraState = rememberCameraState(
         firstPosition = CameraPosition(
             target = Position(longitude = 13.4, latitude = 52.5), // Berlin
             zoom = 12.0,
         )
     )
-    MaplibreMap(
-        modifier = Modifier.fillMaxSize(),
-        baseStyle = BaseStyle.Uri(JAWG_STREETS_STYLE_URL),
-        cameraState = cameraState,
-    )
+    Box(Modifier.fillMaxSize()) {
+        MaplibreMap(
+            modifier = Modifier.fillMaxSize(),
+            baseStyle = BaseStyle.Uri(JAWG_STREETS_STYLE_URL),
+            cameraState = cameraState,
+        )
+        IconButton(
+            onClick = onClickBack,
+            modifier = Modifier.safeDrawingPadding().padding(8.dp),
+        ) { BackIcon() }
+    }
 }
 
 // JawgMaps hosted vector style (same provider/token the Android build + PR #6352 use).
