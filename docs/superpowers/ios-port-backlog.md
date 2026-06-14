@@ -127,8 +127,10 @@ späteren Increment wird die Karte der echte Hauptbildschirm. JawgMaps-Token noc
 wie im Android-Build). **GERÄTE-VERIFIZIERT 2026-06-14:** HEAD aufs physische iPhone 16 Pro deployt
 (deckt M3a + M3b.1 ab) — App startet ins Menü, **die Karte rendert echte Tiles auf dem Gerät**;
 `MapLibre.framework` wird in die Geräte-`.app` eingebettet, der Geräte-SPM-Pfad `arm64-apple-ios`
-funktioniert. **Noch offen: OAuth-Login auf dem Gerät** — braucht einen OpenStreetMap-Account
-(openstreetmap.org); Pfad My Profile→Login→OSM-WebView→`streetcomplete://oauth`-Interception.
+funktioniert. **OAuth-Login GERÄTE-VERIFIZIERT 2026-06-14:** My Profile→Login→OSM-WebView→
+`streetcomplete://oauth`-Interception→Token→eingeloggt, Account-Tab sichtbar auf dem iPhone. War das
+größte iOS-Unbekannte (Redirect-Interception in der WebView) — funktioniert end-to-end auf dem Gerät.
+Damit sind M3a + M3b.1 vollständig gerätebestätigt.
 
 **Nächster Schritt:** M3b.2 (Layer-/Style-Port aus #6352 in commonMain: echter Map-Style + Pins/Overlay/
 Geometrie-Layer + Kamera-Persistenz via Preferences) detaillieren & umsetzen, dann M3b.3 (Location-Dot:
