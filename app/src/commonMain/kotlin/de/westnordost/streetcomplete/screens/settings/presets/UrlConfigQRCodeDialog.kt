@@ -14,18 +14,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.tooling.preview.PreviewLightDark
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import de.westnordost.streetcomplete.R
 import de.westnordost.streetcomplete.resources.*
 import de.westnordost.streetcomplete.ui.common.CopyIcon
 import de.westnordost.streetcomplete.ui.common.dialogs.InfoDialog
 import de.westnordost.streetcomplete.ui.theme.AppTheme
-import de.westnordost.streetcomplete.util.ktx.toast
 import io.github.alexzhirkevich.qrose.rememberQrCodePainter
 import org.jetbrains.compose.resources.stringResource
 
@@ -53,7 +50,6 @@ fun UrlConfigQRCodeDialog(
                         .fillMaxWidth()
                         .aspectRatio(1f),
                 )
-                val context = LocalContext.current
                 OutlinedTextField(
                     value = TextFieldValue(url, selection = TextRange(0, url.length)),
                     onValueChange = { /* the text is not changed */ },
@@ -66,7 +62,6 @@ fun UrlConfigQRCodeDialog(
                             //  something with Snackbar Host, a third party library like
                             //  https://github.com/dokar3/compose-sonner or self-made, like e.g.
                             //  https://github.com/T8RIN/ComposeToast/blob/main/ToastHost.kt
-                            context.toast(R.string.urlconfig_url_copied)
                         }) {
                             CopyIcon()
                         }
@@ -79,7 +74,7 @@ fun UrlConfigQRCodeDialog(
     )
 }
 
-@PreviewLightDark // QR code should be on white background, otherwise bad (-:
+@Preview // QR code should be on white background, otherwise bad (-:
 @Composable
 private fun PreviewUrlConfigQRDialog() {
     AppTheme {
