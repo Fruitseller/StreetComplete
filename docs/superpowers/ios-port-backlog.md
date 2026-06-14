@@ -124,8 +124,11 @@ Back-Button (Chevron) oben links. Umgesetzt: spmForKmp-Plugin + natives MapLibre
 commonMain→androidMain, maplibre-compose 0.13.0 in commonMain, Xcode-FRAMEWORK_SEARCH_PATHS (Sim+Gerät),
 `/app/src/swift/` gitignored (spmForKmp-Bridge-Stub). MapScreen ist vorerst ein Menü-Eintrag; in einem
 späteren Increment wird die Karte der echte Hauptbildschirm. JawgMaps-Token noch im Quellcode (TODO,
-wie im Android-Build). **Gerätedeployment steht aus** (auch zur Verifikation des Geräte-SPM-Pfads
-`arm64-apple-ios`); braucht das iPhone.
+wie im Android-Build). **GERÄTE-VERIFIZIERT 2026-06-14:** HEAD aufs physische iPhone 16 Pro deployt
+(deckt M3a + M3b.1 ab) — App startet ins Menü, **die Karte rendert echte Tiles auf dem Gerät**;
+`MapLibre.framework` wird in die Geräte-`.app` eingebettet, der Geräte-SPM-Pfad `arm64-apple-ios`
+funktioniert. **Noch offen: OAuth-Login auf dem Gerät** — braucht einen OpenStreetMap-Account
+(openstreetmap.org); Pfad My Profile→Login→OSM-WebView→`streetcomplete://oauth`-Interception.
 
 **Nächster Schritt:** M3b.2 (Layer-/Style-Port aus #6352 in commonMain: echter Map-Style + Pins/Overlay/
 Geometrie-Layer + Kamera-Persistenz via Preferences) detaillieren & umsetzen, dann M3b.3 (Location-Dot:
