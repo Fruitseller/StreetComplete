@@ -14,11 +14,14 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import de.westnordost.streetcomplete.ApplicationConstants
 import de.westnordost.streetcomplete.resources.Res
 import de.westnordost.streetcomplete.resources.action_about2
 import de.westnordost.streetcomplete.resources.action_settings
+import de.westnordost.streetcomplete.resources.user_profile
 import de.westnordost.streetcomplete.screens.about.AboutNavHost
 import de.westnordost.streetcomplete.screens.settings.SettingsNavHost
+import de.westnordost.streetcomplete.screens.user.UserNavHost
 import org.jetbrains.compose.resources.stringResource
 
 /** Top-level shared navigation shell for platforms without the Fragment-based main screen
@@ -27,11 +30,13 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun MainMenuNavHost() {
     val navController = rememberNavController()
+    // This is the root host (no parent to bubble to on iOS), so a failed popBackStack is a no-op.
     fun goBack() { navController.popBackStack() }
 
     NavHost(navController = navController, startDestination = MainMenuDestination.Menu) {
         composable(MainMenuDestination.Menu) {
             MainMenuScreen(
+                onClickProfile = { navController.navigate(MainMenuDestination.User) },
                 onClickSettings = { navController.navigate(MainMenuDestination.Settings) },
                 onClickAbout = { navController.navigate(MainMenuDestination.About) },
             )
@@ -42,18 +47,23 @@ fun MainMenuNavHost() {
         composable(MainMenuDestination.Settings) {
             SettingsNavHost(onClickBack = ::goBack, onClickShowQuestTypeForDebug = {})
         }
+        composable(MainMenuDestination.User) {
+            UserNavHost(launchAuth = false, onClickBack = ::goBack)
+        }
     }
 }
 
 @Composable
 private fun MainMenuScreen(
+    onClickProfile: () -> Unit,
     onClickSettings: () -> Unit,
     onClickAbout: () -> Unit,
 ) {
     Scaffold(
-        topBar = { TopAppBar(title = { Text("StreetComplete") }) }
+        topBar = { TopAppBar(title = { Text(ApplicationConstants.NAME) }) }
     ) { padding ->
         Column(Modifier.fillMaxWidth().padding(padding)) {
+            MenuRow(stringResource(Res.string.user_profile), onClickProfile)
             MenuRow(stringResource(Res.string.action_settings), onClickSettings)
             MenuRow(stringResource(Res.string.action_about2), onClickAbout)
         }
