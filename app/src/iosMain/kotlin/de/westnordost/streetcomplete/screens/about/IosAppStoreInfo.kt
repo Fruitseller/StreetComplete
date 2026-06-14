@@ -1,8 +1,9 @@
 package de.westnordost.streetcomplete.screens.about
 
 class IosAppStoreInfo : AppStoreInfo {
-    override fun getRatingUri(): String =
-        "https://apps.apple.com/app/id${TODO("insert StreetComplete app id")}?action=write-review"
+    // The app has no App Store presence yet, so there is no rating URI. Once it is
+    // published, return "https://apps.apple.com/app/id<APP_ID>?action=write-review".
+    override fun getRatingUri(): String? = null
 
     override fun disallowsInAppDonationLinks(): Boolean =
         true
