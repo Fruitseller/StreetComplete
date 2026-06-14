@@ -6,6 +6,8 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.io.FileInputStream
 import java.io.FileWriter
 import java.util.Properties
+import io.github.frankois944.spmForKmp.swiftPackageConfig
+import java.net.URI
 
 
 /** App version name, code and flavor */
@@ -45,6 +47,7 @@ plugins {
     // keep in sync with Kotlin version! See https://mokkery.dev/docs/Setup/#compatibility
     id("dev.mokkery") version "3.4.2"
     id("org.jetbrains.kotlin.plugin.allopen") version "2.4.0"
+    id("io.github.frankois944.spmForKmp") version "1.9.1"
 }
 
 repositories {
@@ -100,6 +103,25 @@ kotlin {
             baseName = "StreetComplete"
             isStatic = true
         }
+        // Native MapLibre.framework is supplied via SPM (NOT in the maven artifact, which ships only
+        // the cinterop klib). cinteropName "maplibreNative" determines the build output dir.
+        iosTarget.swiftPackageConfig(cinteropName = "maplibreNative") {
+            dependency {
+                remotePackageVersion(
+                    url = URI("https://github.com/maplibre/maplibre-gl-native-distribution.git"),
+                    products = { add("MapLibre", exportToKotlin = true) },
+                    packageName = "maplibre-gl-native-distribution",
+                    version = "6.25.1",
+                )
+            }
+        }
+        val variant = when (iosTarget.targetName) {
+            "iosArm64" -> "arm64-apple-ios"
+            "iosSimulatorArm64" -> "arm64-apple-ios-simulator"
+            else -> error("Unrecognized iOS target: ${iosTarget.targetName}")
+        }
+        val rpath = "${layout.buildDirectory.get()}/spmKmpPlugin/maplibreNative/scratch/$variant/release/"
+        iosTarget.binaries.all { linkerOpts("-F$rpath", "-rpath", rpath) }
     }
 
     sourceSets {
@@ -117,7 +139,6 @@ kotlin {
                 implementation("io.insert-koin:koin-core")
                 implementation("io.insert-koin:koin-compose")
                 implementation("io.insert-koin:koin-compose-viewmodel")
-                implementation("io.insert-koin:koin-androidx-compose-navigation")
 
                 // Logging
                 implementation("co.touchlab:kermit:2.1.0")
@@ -173,6 +194,9 @@ kotlin {
                 implementation("org.jetbrains.compose.ui:ui-backhandler:1.11.1")
                 implementation("org.jetbrains.androidx.navigation:navigation-compose:2.9.2")
 
+                // Multiplatform map
+                implementation("org.maplibre.compose:maplibre-compose:0.13.0")
+
                 // UI ViewModel
                 implementation("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0")
 
@@ -205,6 +229,7 @@ kotlin {
                 // Dependency injection
                 implementation("io.insert-koin:koin-android")
                 implementation("io.insert-koin:koin-androidx-workmanager")
+                implementation("io.insert-koin:koin-androidx-compose-navigation")
 
                 // Android stuff
                 implementation("com.google.android.material:material:1.14.0")

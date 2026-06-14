@@ -20,6 +20,7 @@ import de.westnordost.streetcomplete.resources.action_about2
 import de.westnordost.streetcomplete.resources.action_settings
 import de.westnordost.streetcomplete.resources.user_profile
 import de.westnordost.streetcomplete.screens.about.AboutNavHost
+import de.westnordost.streetcomplete.screens.main.map.MapScreen
 import de.westnordost.streetcomplete.screens.settings.SettingsNavHost
 import de.westnordost.streetcomplete.screens.user.UserNavHost
 import org.jetbrains.compose.resources.stringResource
@@ -36,10 +37,14 @@ fun MainMenuNavHost() {
     NavHost(navController = navController, startDestination = MainMenuDestination.Menu) {
         composable(MainMenuDestination.Menu) {
             MainMenuScreen(
+                onClickMap = { navController.navigate(MainMenuDestination.Map) },
                 onClickProfile = { navController.navigate(MainMenuDestination.User) },
                 onClickSettings = { navController.navigate(MainMenuDestination.Settings) },
                 onClickAbout = { navController.navigate(MainMenuDestination.About) },
             )
+        }
+        composable(MainMenuDestination.Map) {
+            MapScreen()
         }
         composable(MainMenuDestination.About) {
             AboutNavHost(onClickBack = ::goBack)
@@ -55,6 +60,7 @@ fun MainMenuNavHost() {
 
 @Composable
 private fun MainMenuScreen(
+    onClickMap: () -> Unit,
     onClickProfile: () -> Unit,
     onClickSettings: () -> Unit,
     onClickAbout: () -> Unit,
@@ -63,6 +69,7 @@ private fun MainMenuScreen(
         topBar = { TopAppBar(title = { Text(ApplicationConstants.NAME) }) }
     ) { padding ->
         Column(Modifier.fillMaxWidth().padding(padding)) {
+            MenuRow("Map", onClickMap)
             MenuRow(stringResource(Res.string.user_profile), onClickProfile)
             MenuRow(stringResource(Res.string.action_settings), onClickSettings)
             MenuRow(stringResource(Res.string.action_about2), onClickAbout)
@@ -81,6 +88,7 @@ private fun MenuRow(text: String, onClick: () -> Unit) {
 
 object MainMenuDestination {
     const val Menu = "menu"
+    const val Map = "map"
     const val About = "about"
     const val Settings = "settings"
     const val User = "user"

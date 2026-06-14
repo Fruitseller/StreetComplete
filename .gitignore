@@ -24,3 +24,6 @@ captures
 !*.xcworkspace/contents.xcworkspacedata
 **/xcshareddata/WorkspaceSettings.xcsettings
 xcuserdata
+
+# spmForKmp-generated Swift bridge (regenerated each build)
+/app/src/swift/
