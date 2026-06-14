@@ -111,10 +111,26 @@ Signatur-Anpassungen portierbar sind.
 wiederholt NSURLError -999 (cancelled). Map-Surface + Ornamente rendern, kein Crash. In M3b einen echten
 Vektor-Style (z. B. JawgMaps aus der #6352-Referenz) nutzen, um Tiles zu verifizieren.
 
-**Nächster Schritt:** M3b-Detailplan schreiben (Karte + Location-Dot, vom Nutzer so gewählt), beginnend
-mit dem obigen Integrations-Rezept als erstem (verifizierbarem) Increment „erste sichtbare Karte hinter
-einem Menü-Eintrag", dann Layer-Port aus #6352, dann Location (CLLocationManager + neues commonMain-
-LocationManager/Compass-Interface + `NSLocationWhenInUseUsageDescription`). Bridge-Abschnitt im M3a-Plan.
+**M3b-Plan:** `docs/superpowers/plans/2026-06-14-ios-port-m3b-map-and-location.md` (Task 1 voll
+ausführbar aus dem Spike-Rezept; Task 2 Layer-Port + Task 3 Location als Outline).
+
+### ✅ M3b.1 ERLEDIGT (2026-06-14) — erste sichtbare iOS-Karte
+Das obige Integrations-Rezept umgesetzt + eine echte Vektorkarte gerendert. Commits `e10bbab8`
+(Integration + MapScreen + Menü-Eintrag „Map") und `58c3bee4` (Back-Navigation auf der Karte).
+Simulator-verifiziert: **echte JawgMaps-Vektorkacheln rendern** (Berlin: Straßen, Labels, Spree,
+Parks), `MapLibre.framework` wird automatisch in die `.app` eingebettet, Metal aktiv, kein Crash,
+Back-Button (Chevron) oben links. Umgesetzt: spmForKmp-Plugin + natives MapLibre 6.25.1 via SPM,
+`iosX64` aus kotlin-Targets UND buildkonfig-Loop entfernt, `koin-androidx-compose-navigation`
+commonMain→androidMain, maplibre-compose 0.13.0 in commonMain, Xcode-FRAMEWORK_SEARCH_PATHS (Sim+Gerät),
+`/app/src/swift/` gitignored (spmForKmp-Bridge-Stub). MapScreen ist vorerst ein Menü-Eintrag; in einem
+späteren Increment wird die Karte der echte Hauptbildschirm. JawgMaps-Token noch im Quellcode (TODO,
+wie im Android-Build). **Gerätedeployment steht aus** (auch zur Verifikation des Geräte-SPM-Pfads
+`arm64-apple-ios`); braucht das iPhone.
+
+**Nächster Schritt:** M3b.2 (Layer-/Style-Port aus #6352 in commonMain: echter Map-Style + Pins/Overlay/
+Geometrie-Layer + Kamera-Persistenz via Preferences) detaillieren & umsetzen, dann M3b.3 (Location-Dot:
+CLLocationManager + neues commonMain-LocationManager/Compass-Interface + `NSLocationWhenInUseUsageDescription`).
+Offline-Tiles bleiben zurückgestellt (#6072).
 
 ---
 
