@@ -10,7 +10,11 @@ import org.koin.dsl.module
 import platform.Foundation.NSBundle
 
 actual val metadataPlatformModule = module {
-    val dir = NSBundle.mainBundle.resourcePath + "/compose-resources/files/"
+    // compose-resources are bundled under composeResources/<packageOfResClass>/ (see
+    // app/build.gradle.kts compose.resources.packageOfResClass). boundaries.ser + osmfeatures are
+    // read here as raw files via kotlinx.io (not through `Res`), so the full nested path is needed.
+    val dir = NSBundle.mainBundle.resourcePath +
+        "/compose-resources/composeResources/de.westnordost.streetcomplete.resources/files/"
 
     single<de.westnordost.countryboundaries.CountryBoundaries> {
         val file = Path(dir + "boundaries.ser")
