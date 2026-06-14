@@ -1,6 +1,5 @@
 package de.westnordost.streetcomplete.screens.user.login
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,7 +26,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -40,13 +38,9 @@ import com.multiplatform.webview.web.WebViewNavigator
 import com.multiplatform.webview.web.rememberWebViewNavigator
 import com.multiplatform.webview.web.rememberWebViewState
 import de.westnordost.streetcomplete.ApplicationConstants
-import de.westnordost.streetcomplete.R
 import de.westnordost.streetcomplete.resources.*
-import de.westnordost.streetcomplete.screens.user.login.LoginError.CommunicationError
-import de.westnordost.streetcomplete.screens.user.login.LoginError.RequiredPermissionsNotGranted
 import de.westnordost.streetcomplete.ui.common.BackIcon
 import de.westnordost.streetcomplete.ui.theme.titleLarge
-import de.westnordost.streetcomplete.util.ktx.toast
 import org.jetbrains.compose.resources.stringResource
 
 /** Leads user through the OAuth 2 auth flow to login */
@@ -63,16 +57,12 @@ fun LoginScreen(
         if (launchAuth) viewModel.startLogin()
     }
 
-    // handle error state: just show message once and return to login state
-    val context = LocalContext.current
+    // handle error state: reset to login state so the user can retry.
+    // TODO multiplatform: show the error message to the user. There is no multiplatform
+    //  toast/snackbar utility yet (same gap as UrlConfigQRCodeDialog) — restore the feedback
+    //  (Res.string.oauth_failed_permissions / oauth_communication_error) once one exists.
     LaunchedEffect(state) {
-        val errorState = state as? LoginError
-        if (errorState != null) {
-            val errorMessage = when (errorState) {
-                RequiredPermissionsNotGranted -> R.string.oauth_failed_permissions
-                CommunicationError -> R.string.oauth_communication_error
-            }
-            context.toast(errorMessage, Toast.LENGTH_LONG)
+        if (state is LoginError) {
             viewModel.resetLogin()
         }
     }
