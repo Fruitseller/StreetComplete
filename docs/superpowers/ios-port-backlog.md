@@ -61,9 +61,60 @@ werden, brauchen den vollen verschachtelten Pfad.
 User-Tabs nach Login (Avatar-Download; nur per echtem Login erreichbar) · Overlay/Language/Messages-
 Auswahl (einfache Listen, geringes Risiko).
 
-**Nächster Schritt:** maplibre-compose-Spike (Version gegen Compose 1.10.3 validieren, triviale Karte
-auf iOS rendern) → dann M3b-Detailplan (Karte + Location-Dot, vom Nutzer so gewählt). Siehe
-`docs/superpowers/plans/2026-06-14-ios-port-m3a-nav-and-menu-screens.md` Abschnitt „Bridge to M3b".
+## ✅ M3b-Spike ERLEDIGT (2026-06-14) — maplibre-compose auf iOS: **GO**
+
+`org.maplibre.compose:maplibre-compose:0.13.0` kompiliert, linkt, bindet das native MapLibre-Framework
+ein und rendert auf dem iOS-Simulator (arm64, Metal aktiv, kein Crash) im exakten Fork-Stack
+(CMP 1.10.3, Kotlin 2.3.20, Koin 4.2.1). Verifiziert per Screenshot (MapLibre-Attribution/Info-Button
+auf lebender Map-Surface) + Logs. Der Spike war exploratorisch und wurde vollständig zurückgerollt
+(Tree clean); das Ergebnis ist dieses Rezept. Vollständiger Report: Task-Output des Agents `m3b-spike`.
+
+**Version:** 0.13.0 (neueste; Maven Central hat 0.11.0/0.11.1/0.12.0/0.12.1/0.13.0). 0.13.0s POM pinnt
+Compose-Foundation 1.10.3 + lifecycle 2.10.0 + Kotlin-stdlib 2.3.21 → fast exakt unser Stack (besser
+als #6352s 0.11.1 gegen Compose 1.10.0). iOS-Artefakte nur für **iosArm64 + iosSimulatorArm64** (KEIN iosX64).
+
+**iOS-Integrations-Rezept (das eigentliche Spike-Ergebnis — #6352 lief NIE auf iOS):**
+1. **Natives `MapLibre.framework` kommt via SPM, NICHT aus dem Maven-Artefakt** (das klib enthält nur
+   das cinterop-Binding). Plugin **`io.github.frankois944.spmForKmp` Version `1.9.1`**; natives MapLibre
+   `maplibre-gl-native-distribution` **6.25.1** (was 0.13.0 testet).
+2. **`iosX64()` aus den Targets entfernen** (0.13.0 publiziert es nicht; spmForKmp-cinterop-Task bricht
+   sonst hart ab). iosX64 = veralteter Intel-Sim, gefahrlos streichbar.
+3. **`koin-androidx-compose-navigation` von commonMain → androidMain verschieben** (Android-only-AAR ohne
+   Native-Varianten; die strikte cinterop-Konfiguration scheitert sonst. Vorbestehender latenter Bug;
+   kein commonMain-Code nutzt dessen API).
+4. **build.gradle.kts:** in der iOS-Target-Schleife pro Target `iosTarget.swiftPackageConfig(cinteropName
+   = "maplibreNative") { dependency { remotePackageVersion(url = URI("https://github.com/maplibre/
+   maplibre-gl-native-distribution.git"), products = { add("MapLibre", exportToKotlin = true) },
+   packageName = "maplibre-gl-native-distribution", version = "6.25.1") } }` + `linkerOpts("-F$rpath",
+   "-rpath", rpath)` mit `rpath = build/spmKmpPlugin/maplibreNative/scratch/<variant>/release/`
+   (variant: iosArm64→arm64-apple-ios, iosSimulatorArm64→arm64-apple-ios-simulator). Imports
+   `io.github.frankois944.spmForKmp.swiftPackageConfig` + `java.net.URI`. Plugin-Block:
+   `id("io.github.frankois944.spmForKmp") version "1.9.1"`.
+5. **Xcode `FRAMEWORK_SEARCH_PATHS`** (Debug + Release-Gerät) auf den SPM-Build-Pfad zeigen lassen:
+   `$(SRCROOT)/../app/build/spmKmpPlugin/maplibreNative/scratch/arm64-apple-ios-simulator/release` (Sim)
+   bzw. `.../arm64-apple-ios/release` (Gerät) — Pfad ist nach **cinteropName** `maplibreNative` benannt,
+   NICHT nach Target. Ohne den Pfad: `framework 'MapLibre' not found` / undefined `_OBJC_CLASS_$_MLNMapView`.
+   Einbettung in die .app passierte automatisch (landet in `StreetComplete.app/Frameworks/`, lädt via
+   bestehendem `@executable_path/Frameworks`-rpath) — keine manuelle Embed-Phase nötig.
+6. Plugin erzeugt `app/src/swift/maplibreNative/StartYourBridgeHere.swift` (Bridge-Stub) → in M3b
+   committen oder gitignoren. Metal läuft auf dem Sim ohne Info.plist-/Entitlement-Änderung.
+
+**API 0.13.0:** `MaplibreMap(modifier, baseStyle: BaseStyle = BaseStyle.Demo, cameraState =
+rememberCameraState(), styleState = rememberStyleState(), onMapClick, …, content)`. `BaseStyle`:
+`Uri(String)`/`Json(...)`/`Demo`/`Empty`. `rememberCameraState(firstPosition: CameraPosition)`;
+`CameraPosition(bearing, target: Position, tilt, zoom, padding)`; `Position(longitude=, latitude=)`
+(GeoJSON lon/lat-Reihenfolge, benannte Args nutzen). Packages `org.maplibre.compose.{map,camera,style,
+layers,sources,expressions}` — wie in #6352, dessen `map2/Map.kt`+`MapStyle.kt` mit minimalen
+Signatur-Anpassungen portierbar sind.
+
+**Tiles:** im Spike NICHT sichtbar gerendert — `BaseStyle.Demo` (demotiles.maplibre.org) lieferte
+wiederholt NSURLError -999 (cancelled). Map-Surface + Ornamente rendern, kein Crash. In M3b einen echten
+Vektor-Style (z. B. JawgMaps aus der #6352-Referenz) nutzen, um Tiles zu verifizieren.
+
+**Nächster Schritt:** M3b-Detailplan schreiben (Karte + Location-Dot, vom Nutzer so gewählt), beginnend
+mit dem obigen Integrations-Rezept als erstem (verifizierbarem) Increment „erste sichtbare Karte hinter
+einem Menü-Eintrag", dann Layer-Port aus #6352, dann Location (CLLocationManager + neues commonMain-
+LocationManager/Compass-Interface + `NSLocationWhenInUseUsageDescription`). Bridge-Abschnitt im M3a-Plan.
 
 ---
 
