@@ -223,7 +223,15 @@ git commit -m "M3b.1: integrate maplibre-compose; first visible iOS map behind a
 
 ---
 
-## Task 2 — M3b.2: Port the map style + layers from the #6352 reference (OUTLINE — detail after Task 1)
+## Task 2 — M3b.2: Port the map style + layers from the #6352 reference — ✅ DONE (2026-06-16)
+
+**Detailed plan + execution:** `docs/superpowers/plans/2026-06-16-ios-port-m3b2-map-style-and-layers.md`
+(5 increments, all committed on `master`: `bb03da67b` style, `d358d0f46` camera, `385efb9c8` layer-stack
+port, `1511dae6d` MapViewModel+3 layers, `ed1466cb1`+`94b80d204` pins+fix). DELIVERED: SC's own
+programmatic vector style on iOS, camera persistence, full layer stack in commonMain, MapViewModel driving
+downloaded-area/markers/focused-geometry/pins (synthetic-verified rendering). DEFERRED (no OSM data / no
+icon-registry on iOS yet): data-source orchestration, per-quest-type pin icons, selected-pins + overlay
+layer wiring. See the backlog M3b.2 section. Original outline below for reference:
 
 To be turned into bite-sized steps once Task 1 lands and the 0.13.0 API is confirmed in-tree. Scope (from the M3.0 investigation + spike):
 - Reference-copy from `upstream/maplibre-compose` (read-only `git show`, do not integrate): `map2/MapStyle.kt` (JawgMaps vector style port), `MapColors.kt`, `ExpressionUtils.kt`, `GeometryUtils.kt`, and the glyph `.pbf` set + `map_*` drawables already under `commonMain/composeResources`. Externalize the JawgMaps token.
