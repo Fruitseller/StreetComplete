@@ -47,7 +47,10 @@ fun Map(
             colors = colors,
             languages = languages,
             belowLabelsContent = {
-                DownloadedAreaLayer(downloadedTiles)
+                // The downloaded-area layer hatches everything OUTSIDE the downloaded tiles. With no
+                // downloaded tiles it would hatch the entire map (very prominent in dark mode and it
+                // drowns the labels), so only show it once something is actually downloaded.
+                if (downloadedTiles.isNotEmpty()) DownloadedAreaLayer(downloadedTiles)
             },
             aboveLabelsContent = {
                 GeometryMarkersLayers(geometryMarkers)
