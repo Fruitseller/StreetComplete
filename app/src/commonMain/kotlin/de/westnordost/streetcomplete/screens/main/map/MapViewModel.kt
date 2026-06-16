@@ -7,6 +7,7 @@ import de.westnordost.streetcomplete.data.download.tiles.DownloadedTilesSource
 import de.westnordost.streetcomplete.data.download.tiles.TilePos
 import de.westnordost.streetcomplete.data.osm.geometry.ElementGeometry
 import de.westnordost.streetcomplete.screens.main.map2.layers.Marker
+import de.westnordost.streetcomplete.screens.main.map2.layers.Pin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,6 +28,9 @@ class MapViewModel(
 
     private val _focusedGeometry = MutableStateFlow<ElementGeometry?>(null)
     val focusedGeometry: StateFlow<ElementGeometry?> = _focusedGeometry.asStateFlow()
+
+    private val _pins = MutableStateFlow<List<Pin>>(emptyList())
+    val pins: StateFlow<List<Pin>> = _pins.asStateFlow()
 
     private val downloadedTilesListener = object : DownloadedTilesSource.Listener {
         override fun onUpdated() { reloadDownloadedTiles() }
@@ -49,6 +53,7 @@ class MapViewModel(
     fun putGeometryMarkers(markers: List<Marker>) { _geometryMarkers.value = markers }
     fun clearGeometryMarkers() { _geometryMarkers.value = emptyList() }
     fun setFocusedGeometry(geometry: ElementGeometry?) { _focusedGeometry.value = geometry }
+    fun setPins(pins: List<Pin>) { _pins.value = pins }
 
     override fun onCleared() {
         downloadedTilesSource.removeListener(downloadedTilesListener)

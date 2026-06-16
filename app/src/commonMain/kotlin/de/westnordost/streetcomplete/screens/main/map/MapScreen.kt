@@ -33,6 +33,7 @@ fun MapScreen(onClickBack: () -> Unit) {
     val downloadedTiles by viewModel.downloadedTiles.collectAsState()
     val markers by viewModel.geometryMarkers.collectAsState()
     val focusedGeometry by viewModel.focusedGeometry.collectAsState()
+    val pins by viewModel.pins.collectAsState()
 
     val prefs: Preferences = koinInject()
     val cameraState = rememberCameraState(
@@ -72,6 +73,7 @@ fun MapScreen(onClickBack: () -> Unit) {
             downloadedTiles = downloadedTiles,
             geometryMarkers = markers,
             focusedGeometry = focusedGeometry,
+            pins = pins,
         )
         IconButton(
             onClick = onClickBack,
