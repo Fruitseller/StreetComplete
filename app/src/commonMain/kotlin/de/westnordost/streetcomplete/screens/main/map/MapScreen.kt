@@ -62,7 +62,6 @@ fun MapScreen(onClickBack: () -> Unit) {
                 prefs.mapZoom = pos.zoom
                 prefs.mapRotation = pos.bearing
                 prefs.mapTilt = pos.tilt
-                println("map camera persisted: lat=${pos.target.latitude} lon=${pos.target.longitude} zoom=${pos.zoom}")
             }
     }
 
