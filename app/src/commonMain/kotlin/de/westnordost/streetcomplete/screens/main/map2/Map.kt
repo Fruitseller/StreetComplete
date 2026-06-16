@@ -11,6 +11,8 @@ import de.westnordost.streetcomplete.screens.main.map2.layers.DownloadedAreaLaye
 import de.westnordost.streetcomplete.screens.main.map2.layers.FocusedGeometryLayers
 import de.westnordost.streetcomplete.screens.main.map2.layers.GeometryMarkersLayers
 import de.westnordost.streetcomplete.screens.main.map2.layers.Marker
+import de.westnordost.streetcomplete.screens.main.map2.layers.Pin
+import de.westnordost.streetcomplete.screens.main.map2.layers.PinsLayers
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.maplibre.compose.camera.CameraState
 import org.maplibre.compose.camera.rememberCameraState
@@ -29,6 +31,7 @@ fun Map(
     downloadedTiles: Collection<TilePos> = emptyList(),
     geometryMarkers: Collection<Marker> = emptyList(),
     focusedGeometry: ElementGeometry? = null,
+    pins: Collection<Pin> = emptyList(),
 ) {
     MaplibreMap(
         modifier = modifier,
@@ -49,6 +52,7 @@ fun Map(
             aboveLabelsContent = {
                 GeometryMarkersLayers(geometryMarkers)
                 focusedGeometry?.let { FocusedGeometryLayers(it) }
+                PinsLayers(pins)
             },
         )
     }
