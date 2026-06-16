@@ -34,6 +34,7 @@ import de.westnordost.streetcomplete.iosModule
 import de.westnordost.streetcomplete.overlays.overlaysModule
 import de.westnordost.streetcomplete.quests.questsModule
 import de.westnordost.streetcomplete.screens.about.aboutScreenModule
+import de.westnordost.streetcomplete.screens.main.map.mapModule
 import de.westnordost.streetcomplete.screens.settings.settingsScreenModule
 import de.westnordost.streetcomplete.screens.user.userScreenModule
 import de.westnordost.streetcomplete.ui.util.measure.arModule
@@ -64,6 +65,7 @@ fun initKoin() {
             achievementDefinitionsModule,
             editTypeAliasesModule,
             aboutScreenModule,
+            mapModule,
             userScreenModule,
             createdElementsModule,
             logsModule,

@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
@@ -19,6 +21,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNot
 import kotlinx.coroutines.flow.map
 import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinViewModel
 import org.maplibre.compose.camera.CameraPosition
 import org.maplibre.compose.camera.rememberCameraState
 import org.maplibre.spatialk.geojson.Position
@@ -26,6 +29,11 @@ import org.maplibre.spatialk.geojson.Position
 /** iOS map screen (M3b.2b): StreetComplete's own programmatic vector style, camera persisted via Preferences. */
 @Composable
 fun MapScreen(onClickBack: () -> Unit) {
+    val viewModel: MapViewModel = koinViewModel()
+    val downloadedTiles by viewModel.downloadedTiles.collectAsState()
+    val markers by viewModel.geometryMarkers.collectAsState()
+    val focusedGeometry by viewModel.focusedGeometry.collectAsState()
+
     val prefs: Preferences = koinInject()
     val cameraState = rememberCameraState(
         firstPosition = remember {
@@ -58,7 +66,13 @@ fun MapScreen(onClickBack: () -> Unit) {
     }
 
     Box(Modifier.fillMaxSize()) {
-        Map(modifier = Modifier.fillMaxSize(), cameraState = cameraState)
+        Map(
+            modifier = Modifier.fillMaxSize(),
+            cameraState = cameraState,
+            downloadedTiles = downloadedTiles,
+            geometryMarkers = markers,
+            focusedGeometry = focusedGeometry,
+        )
         IconButton(
             onClick = onClickBack,
             modifier = Modifier.safeDrawingPadding().padding(8.dp),
