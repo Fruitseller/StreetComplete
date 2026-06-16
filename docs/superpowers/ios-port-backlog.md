@@ -162,12 +162,25 @@ getAll → Pins/StyledElements bauen — nicht ohne echte Daten verifizierbar), 
 Diese sind portiert/kompilieren, aber nicht in `Map()` verdrahtet. Layer-Setter (`putGeometryMarkers`/
 `setFocusedGeometry`/`setPins`) bilden die saubere Integrations-Schnittstelle für später.
 
-**Geräte-Build + Install VERIFIZIERT (2026-06-16):** `xcodebuild -sdk iphoneos` (arm64-apple-ios-SPM-Pfad)
-**BUILD SUCCEEDED** mit dem kompletten neuen Layer-Code, und die App wurde via `devicectl` aufs iPhone 16 Pro
-**installiert** — bestätigt, dass M3b.2 für das Gerät linkt. **NOCH ZU TUN (braucht entsperrtes iPhone +
-Interaktion):** App auf dem Gerät starten (Launch scheiterte hier nur an „device locked") und der
-On-Device-Check (Karte rendert SC-Style; Pan/Zoom→Kill→Relaunch→Kamera wiederhergestellt). Profil läuft
-2026-06-21 ab (`-allowProvisioningUpdates`).
+**Geräte-Build + Install + LAUNCH VERIFIZIERT (2026-06-16):** `xcodebuild -sdk iphoneos` (arm64-apple-ios-
+SPM-Pfad) **BUILD SUCCEEDED** mit dem kompletten neuen Layer-Code; App via `devicectl` aufs iPhone 16 Pro
+**installiert und gestartet** (läuft auf echter Hardware).
+
+**Zwei Dark-Mode-Folgefixes (2026-06-16, nach Nutzer-Feedback):**
+1. **Menü-Schriften unsichtbar im Dark Mode** (das eigentlich gemeldete Problem — „Schriften in den Menüs
+   kaputt"): `SettingsScreen` (und andere Screens) nutzen ein nacktes `Column` ohne `Scaffold`/`Surface`, daher
+   erbte der Text den Compose-Default `LocalContentColor` = **schwarz** in BEIDEN Modi → im Dark Mode unsichtbar
+   auf dunklem Grund. Das Hauptmenü war ok, weil es ein `Scaffold` (→ themed `Surface`) nutzt. Auf Android liefert
+   die Activity diese Surface; auf iOS (`ComposeUIViewController` + `AppTheme`) fehlte sie. **Fix:** `MainViewController`
+   wrappt den Inhalt in `Surface(color = MaterialTheme.colors.background)` → korrekte `onBackground`-Contentfarbe für
+   ALLE Screens. Settings hell+dunkel verifiziert (alle Zeilen-Labels sichtbar).
+2. **Karte komplett schraffiert (`565d69f6d`):** der `DownloadedAreaLayer` schraffiert ohne heruntergeladene Tiles
+   die GANZE Karte (auf hellem Land kaum sichtbar, auf dunklem Earth prominent). **Fix:** Layer nur rendern
+   `if (downloadedTiles.isNotEmpty())`. Beide Modi sauber.
+(Hinweis: dass die Karte sonst KEINE Pins/Overlays zeigt, ist korrekt — keine OSM-Daten auf iOS.)
+
+**NOCH OFFEN (interaktiv, Nutzer prüft):** Pan/Zoom→Kill→Relaunch→Kamera-Wiederherstellung auf dem Gerät.
+Profil läuft 2026-06-21 ab (`-allowProvisioningUpdates`).
 
 **Nächster Schritt:** M3b.3 (Location-Dot: CLLocationManager + neues commonMain-LocationManager/Compass-
 Interface + `NSLocationWhenInUseUsageDescription`) — bringt erstmals **echte Daten** auf die Karte (GPS).
