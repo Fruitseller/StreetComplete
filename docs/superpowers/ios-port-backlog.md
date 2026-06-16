@@ -132,10 +132,47 @@ funktioniert. **OAuth-Login GERÄTE-VERIFIZIERT 2026-06-14:** My Profile→Login
 größte iOS-Unbekannte (Redirect-Interception in der WebView) — funktioniert end-to-end auf dem Gerät.
 Damit sind M3a + M3b.1 vollständig gerätebestätigt.
 
-**Nächster Schritt:** M3b.2 (Layer-/Style-Port aus #6352 in commonMain: echter Map-Style + Pins/Overlay/
-Geometrie-Layer + Kamera-Persistenz via Preferences) detaillieren & umsetzen, dann M3b.3 (Location-Dot:
-CLLocationManager + neues commonMain-LocationManager/Compass-Interface + `NSLocationWhenInUseUsageDescription`).
-Offline-Tiles bleiben zurückgestellt (#6072).
+### ✅ M3b.2 ERLEDIGT (2026-06-16) — eigener Vektor-Map-Style + Kamera + Layer-Stack in commonMain
+Plan: `docs/superpowers/plans/2026-06-16-ios-port-m3b2-map-style-and-layers.md` (5 Increments, je
+Implementer + Spec- + Quality-Review + Simulator-Screenshot). Was geliefert wurde:
+- **M3b.2a** (`bb03da67b`): StreetComplete's **eigener programmatischer Vektor-Style** rendert auf iOS
+  (statt des generischen JawgMaps-Hosted-Style) — Land/Wasser/Straßen-Casing/Labels in SC-Farben, mit
+  lokal gebündelten Roboto-Glyphs (512 `.pbf`). Port von `MapColors`/`ExpressionUtils`/`MapStyle` +
+  `map_*`-Drawables aus `upstream/maplibre-compose`. Simulator-verifiziert (Berlin).
+- **M3b.2b** (`d358d0f46`): **Kamera-Persistenz** via `Preferences` (`mapPosition/Zoom/Rotation/Tilt`) —
+  seed beim Öffnen, speichern bei Bewegungs-Ende (`snapshotFlow`). Seed-Pfad verifiziert (NSUserDefaults
+  vorbeschrieben → Karte öffnet auf Paris).
+- **M3b.2c** (`385efb9c8`): kompletter **Layer-Stack** (`GeometryUtils` + 9 Layer-Composables) nach
+  commonMain portiert, kompiliert. Reconciliations: geojson `io.github.dellisd`→`org.maplibre.spatialk`,
+  `Feature<Geometry,JsonObject?>` (Properties als `JsonObject`), android-`log2`-Import raus,
+  `image(feature["k"].asString())`, `StyledElement`-Context-Code entfernt.
+- **M3b.2d** (`1511dae6d`): **`MapViewModel`** (commonMain, Koin `mapModule` in `InitKoin`) + 3 Layer
+  verdrahtet (downloaded-area / geometry-markers / focused-geometry). Synthetisch verifiziert (Hatching +
+  pulsierender Focus-Kreis). `getAll` läuft via `withContext(Dispatchers.IO)` (Parität mit androidMain).
+- **M3b.2e** (`ed1466cb1` + Fix `94b80d204`): **Quest-Pins-Layer** verdrahtet (VM `pins`-Flow + Setter).
+  Synthetik-Verifizierung fing einen echten Runtime-Crash: `PinsLayers`/`SelectedPinsLayer` setzten
+  `iconPadding` mit **negativen** Werten → in maplibre-compose 0.13.0 wirft Compose `PaddingValues.Absolute`
+  „Padding must be non-negative" (Link-Gate grün, crasht aber beim Composen!). Fix = auf 0 geklemmt. Danach:
+  Cluster-Pin „6" rendert + leere Produktions-Karte rendert crashfrei. Gotcha in der Memory festgehalten.
+
+**Bewusst ZURÜCKGESTELLT in M3b.2** (auf iOS noch keine OSM-Daten [kein Download] und keine Icon-Registry):
+die **Daten-Orchestrierung** (VisibleQuestsSource/SelectedOverlaySource/MapDataWithEditsSource → bbox →
+getAll → Pins/StyledElements bauen — nicht ohne echte Daten verifizierbar), die **per-Quest-Typ-Pin-Icons**
+(Icon-Registry/Rasterisierung fehlt), sowie **SelectedPinsLayer + StyleableOverlay-Layer-Verdrahtung**.
+Diese sind portiert/kompilieren, aber nicht in `Map()` verdrahtet. Layer-Setter (`putGeometryMarkers`/
+`setFocusedGeometry`/`setPins`) bilden die saubere Integrations-Schnittstelle für später.
+
+**Geräte-Build + Install VERIFIZIERT (2026-06-16):** `xcodebuild -sdk iphoneos` (arm64-apple-ios-SPM-Pfad)
+**BUILD SUCCEEDED** mit dem kompletten neuen Layer-Code, und die App wurde via `devicectl` aufs iPhone 16 Pro
+**installiert** — bestätigt, dass M3b.2 für das Gerät linkt. **NOCH ZU TUN (braucht entsperrtes iPhone +
+Interaktion):** App auf dem Gerät starten (Launch scheiterte hier nur an „device locked") und der
+On-Device-Check (Karte rendert SC-Style; Pan/Zoom→Kill→Relaunch→Kamera wiederhergestellt). Profil läuft
+2026-06-21 ab (`-allowProvisioningUpdates`).
+
+**Nächster Schritt:** M3b.3 (Location-Dot: CLLocationManager + neues commonMain-LocationManager/Compass-
+Interface + `NSLocationWhenInUseUsageDescription`) — bringt erstmals **echte Daten** auf die Karte (GPS).
+Danach evtl. Daten-Orchestrierung + Icon-Registry, sobald Download auf iOS existiert. Offline-Tiles
+bleiben zurückgestellt (#6072).
 
 ---
 
