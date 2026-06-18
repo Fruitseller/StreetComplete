@@ -1,4 +1,4 @@
-# iOS-Port Backlog (Stand: M1 + Re-Sync + M2 + M3a, 2026-06-14)
+# iOS-Port Backlog (Stand: M1 + Re-Sync + M2 + M3a + M3b.1–M3b.3, 2026-06-18)
 
 ## ✅ M3a ABGESCHLOSSEN — iOS-Navigationsgerüst + Menü-Screens (ohne Karte)
 
@@ -186,6 +186,65 @@ Profil läuft 2026-06-21 ab (`-allowProvisioningUpdates`).
 Interface + `NSLocationWhenInUseUsageDescription`) — bringt erstmals **echte Daten** auf die Karte (GPS).
 Danach evtl. Daten-Orchestrierung + Icon-Registry, sobald Download auf iOS existiert. Offline-Tiles
 bleiben zurückgestellt (#6072).
+
+---
+
+### ✅ M3b.3 ERLEDIGT (2026-06-18) — Live-Standort-Punkt + Heading-Pfeil + GPS-Button (Android-Parität)
+Design: `docs/superpowers/specs/2026-06-18-ios-port-m3b3-location-and-heading-design.md` ·
+Plan: `docs/superpowers/plans/2026-06-18-ios-port-m3b3-location-and-heading.md`. Erste **echten Geräte-
+Daten** auf der Karte (GPS + Kompass). Via subagent-driven-development (4 Code-Tasks, je Link-Gate +
+Simulator + Spec-/Quality-Review; Whole-Branch-Review (opus) = **ready-to-merge**).
+
+**Architektur (Variante B, mit Nutzer entschieden):** zwei **dünne** commonMain-Interfaces
+`LocationSource` + `Compass` (Koin **nur auf iOS** gebunden — `mapModule`/`MapViewModel`/`map2` werden auf
+Android nie geladen, daher keine Android-Änderung). Die ganze Zustandslogik (`LocationState`, Follow-,
+Navigations-Modus) lebt im `MapViewModel`/`MapScreen` — gespiegelt von Androids dummen Wrappern
+`FineLocationManager` + `Compass`, wo `MainActivity`/`MainViewModel` orchestrieren.
+
+**Commits:**
+- `7d99b50ba` (Task 1): `LocationSource` + `IosLocationSource` (CLLocationManager) + additives
+  `Location.bearing: Float?` + `iosLocationModule` + `NSLocationWhenInUseUsageDescription`.
+- `ee9812b85` (Task 2): `MapViewModel`-Zustandsmaschine (location-Flow, `LocationState`-Ableitung via
+  `combine(hasPermission, trackingRequested, location)` + `SharingStarted.Eagerly`, Follow persistiert).
+- `cb22a7b51` (Task 3, **M3b.3a**): Dot + `LocationStateButton` + Follow/Recenter + First-Fix-Zoom (→18 wenn
+  <17) + Pan→Follow-aus (via `CameraMoveReason.GESTURE`). Simulator-Screenshot-verifiziert (Dot + Accuracy-
+  Kreis am Pariser Platz). Hier auch `accuracy` auf `>=0` geklemmt (CLLocation `horizontalAccuracy` ist bei
+  ungültigen Fixes negativ → maplibre `CircleLayer`-Radius crasht sonst — vgl. M3b.2e-Gotcha).
+- `639852820` (Task 4, **M3b.3b**): `Compass` + `IosCompass` (CLLocationManager-Heading) + Heading-Pfeil +
+  Navigations-Modus (Tilt 60° + Karten-Rotation zur GPS-Fahrtrichtung).
+
+**iOS-Impl-Details:** `IosLocationSource` + `IosCompass` = **zwei** Klassen mit je eigenem
+`CLLocationManager` (vermeidet den `start()/stop()`-Methodennamen-Clash einer Einzelklasse + spiegelt
+Androids 2-Klassen-Split). Beide Delegates als starkes `private val`-Feld gehalten (gegen die schwache
+`delegate`-Referenz des Managers). `elapsedDuration` aus `NSProcessInfo.systemUptime` (monoton, wie Androids
+`elapsedRealtimeNanos` — `RecentLocations` rechnet nur Deltas). Heading aus `trueHeading` (iOS wendet die
+Deklination bereits an → kein `GeomagneticField` nötig, anders als Android), Fallback `magneticHeading` wenn
+`trueHeading < 0`. Pfeil-Rotation = `Heading − Kamera-Bearing` (kamerarelativ, exakt wie Androids
+`CurrentLocationMapComponent`).
+
+**Bewusste Entscheidungen / Abweichungen:**
+- **`ALLOWED` in `DENIED` kollabiert** (Button verhält sich identisch — gleiches Icon, gleiche „Permission
+  anfragen"-Aktion). Der seltene Fall „Permission erteilt, aber globale Ortungsdienste aus" wird nicht separat
+  modelliert.
+- **Nav-Bearing aus `CLLocation.course`** (GPS-Fahrtrichtung) statt Androids `getTrackBearing()` → spart den
+  Port des `osmtracks`-Track-Recording-Subsystems; dafür das additive `Location.bearing`.
+- Whole-Branch-Review bestätigte: **`iconRotate`/`SymbolLayer` hat in maplibre-compose 0.13.0 KEINE
+  Range-Validierung** (negative/>360 Rotation ist safe — die Negativ-Ablehnung betraf nur `PaddingValues`/
+  icon-padding aus M3b.2e). K/N-Threading safe (Delegate-Callbacks auf Main → `MutableStateFlow` → Compose).
+
+**Geräte-Build + Install + LAUNCH VERIFIZIERT (2026-06-18):** `xcodebuild -sdk iphoneos` (arm64-apple-ios
+SPM-Pfad) **BUILD SUCCEEDED** mit dem neuen Compass-/Location-Code; via `devicectl` aufs iPhone 16 Pro
+installiert und gestartet. (Profil läuft 2026-06-21 ab; `-allowProvisioningUpdates` erneuert es.)
+
+**NOCH OFFEN (interaktiv, nur auf Gerät prüfbar — Nutzer):** Permission-Prompt → Allow; Dot an echter
+Position + Auto-Zoom/Follow; **Heading-Pfeil dreht beim physischen Drehen des Telefons**; **Navigations-Modus**
+(3. Tipp: Tilt + Karte rotiert zur Fahrtrichtung; nochmal Tippen: Tilt weg, Bearing bleibt); Pan → Follow aus.
+(Kompass + Nav sind auf dem Simulator NICHT verifizierbar — kein Magnetometer, 3-Tipp-Toggle nicht skriptbar.)
+
+**ZURÜCKGESTELLT (Backlog, kein Blocker):** **kein pause-on-background** für die Sensoren — Updates starten bei
+Permission und stoppen erst in `onCleared()` (Android stoppt in `onPause`/startet in `onResume`). Kein
+permanentes Leak (`onCleared()` stoppt beide Manager), aber Akku-Drain im Hintergrund; für eine spätere
+Iteration mit Lifecycle-Parität vorgemerkt. Offline-Tiles (#6072) weiterhin zurückgestellt.
 
 ---
 

@@ -239,12 +239,19 @@ To be turned into bite-sized steps once Task 1 lands and the 0.13.0 API is confi
 - Write a real `Map()` taking a ViewModel/state (use #6352's `Map.kt` only for layer ordering — its body references ~12 undefined symbols). Persist camera via `Preferences.mapPosition/Zoom/Rotation/Tilt`.
 - Wire quest pins / overlays from the existing commonMain data layer (design fresh commonMain ViewModels; #6352 has no manager layer).
 
-## Task 3 — M3b.3: Location dot (OUTLINE — detail after Task 2)
+## Task 3 — M3b.3: Location dot + heading + GPS button — ✅ DONE (2026-06-18)
 
-- Add `NSLocationWhenInUseUsageDescription` to `iosApp/iosApp/Info.plist`.
-- Introduce a commonMain `LocationManager` interface (none exists today): expose `Flow<Location>` using the existing commonMain `Location(position, accuracy, elapsedDuration)`; Android actual wraps the existing `FineLocationManager`, iOS actual wraps `CLLocationManager` (mirror `android.location.Location.toLocation()`; use a monotonic clock for `elapsedDuration` to match `RecentLocations`/`SurveyChecker`).
-- Drive the existing commonMain `LocationState` enum + `LocationStateButton`; render the dot via the ported `CurrentLocationLayers` (renders fine with `rotation == null`).
-- Heading/compass (`CLHeading`/`CMMotionManager`) is a further sub-step — `CurrentLocationLayers` works without it.
+**Detailed plan + execution:** `docs/superpowers/plans/2026-06-18-ios-port-m3b3-location-and-heading.md`
+(design: `docs/superpowers/specs/2026-06-18-ios-port-m3b3-location-and-heading-design.md`).
+Delivered via subagent-driven-development (4 code tasks, each link-gate + simulator-verified +
+spec/quality review; whole-branch review = ready-to-merge). Commits `7d99b50ba`→`639852820`.
+Outcome differs from this outline in two deliberate ways decided with the user:
+- **Two thin interfaces** `LocationSource` + `Compass` (Koin-bound on iOS only — the map stack is
+  iOS-only), NOT one expect/actual `LocationManager`. Orchestration (LocationState, follow,
+  navigation mode) lives in `MapViewModel`/`MapScreen`, mirroring Android's dumb-wrapper split.
+- Scope INCLUDES the **heading arrow** (CLLocationManager `trueHeading`) and the full **Android-parity
+  GPS button** (request → follow → navigation mode; pan drops follow), not just the dot.
+See the backlog "M3b.3 ERLEDIGT" section for the full record.
 
 ## Task 4 — M3b wrap-up (OUTLINE)
 
