@@ -62,13 +62,17 @@ fun MapScreen(onClickBack: () -> Unit) {
         }
     )
 
-    // Persist camera position when movement ends.
+    // Persist camera position when a USER-driven move ends. Skip while following: follow animates the
+    // camera ~1×/fix, and persisting those would churn prefs and store tilt=60 / GPS heading from
+    // navigation mode (so a later cold start would restore a tilted, rotated camera). A user pan flips
+    // isFollowing off (via the pan detector below) before the move ends, so real pans still persist.
     LaunchedEffect(cameraState) {
         snapshotFlow { cameraState.isCameraMoving to cameraState.position }
             .filterNot { it.first }
             .map { it.second }
             .distinctUntilChanged()
             .collect { pos ->
+                if (viewModel.isFollowing.value) return@collect
                 prefs.mapPosition = LatLon(latitude = pos.target.latitude, longitude = pos.target.longitude)
                 prefs.mapZoom = pos.zoom
                 prefs.mapRotation = pos.bearing
@@ -83,7 +87,6 @@ fun MapScreen(onClickBack: () -> Unit) {
         val loc = location ?: return@LaunchedEffect
         val current = cameraState.position
         val zoom = if (!zoomedYet && current.zoom < 17.0) 18.0 else current.zoom
-        zoomedYet = true
         cameraState.animateTo(
             current.copy(
                 target = Position(longitude = loc.position.longitude, latitude = loc.position.latitude),
@@ -95,6 +98,10 @@ fun MapScreen(onClickBack: () -> Unit) {
             ),
             duration = 600.milliseconds,
         )
+        // set only AFTER the animation completes: if a new fix cancels it mid-zoom, zoomedYet stays
+        // false so the next fix re-attempts the first-fix zoom-to-18 instead of locking in an
+        // intermediate zoom read from the cancelled animation.
+        zoomedYet = true
     }
 
     // User pan drops follow mode (programmatic follow animations report PROGRAMMATIC, not GESTURE).
@@ -126,7 +133,9 @@ fun MapScreen(onClickBack: () -> Unit) {
         LocationStateButton(
             onClick = viewModel::onClickLocationButton,
             state = locationState,
-            isFollowing = isFollowing,
+            // only highlight "following" when location is actually enabled — otherwise a fresh install
+            // (DENIED + persisted isFollowing=true) shows the disabled icon misleadingly tinted active.
+            isFollowing = isFollowing && locationState.isEnabled,
             isNavigationMode = isNavigationMode,
             modifier = Modifier.align(Alignment.BottomEnd).safeDrawingPadding().padding(16.dp),
         )
