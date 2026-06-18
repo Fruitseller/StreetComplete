@@ -31,6 +31,7 @@ import de.westnordost.streetcomplete.data.visiblequests.visibleQuestsModule
 import de.westnordost.streetcomplete.data.weeklyosm.weeklyOsmModule
 import de.westnordost.streetcomplete.iosControllersModule
 import de.westnordost.streetcomplete.iosModule
+import de.westnordost.streetcomplete.util.location.iosLocationModule
 import de.westnordost.streetcomplete.overlays.overlaysModule
 import de.westnordost.streetcomplete.quests.questsModule
 import de.westnordost.streetcomplete.screens.about.aboutScreenModule
@@ -61,6 +62,7 @@ fun initKoin() {
         modules(
             iosModule,
             iosControllersModule,
+            iosLocationModule,
             achievementsModule,
             achievementDefinitionsModule,
             editTypeAliasesModule,
