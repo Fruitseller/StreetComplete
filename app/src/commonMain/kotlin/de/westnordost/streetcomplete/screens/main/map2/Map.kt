@@ -5,8 +5,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.intl.Locale
 import de.westnordost.streetcomplete.data.download.tiles.TilePos
+import de.westnordost.streetcomplete.data.location.Location
 import de.westnordost.streetcomplete.data.osm.geometry.ElementGeometry
 import de.westnordost.streetcomplete.resources.Res
+import de.westnordost.streetcomplete.screens.main.map2.layers.CurrentLocationLayers
 import de.westnordost.streetcomplete.screens.main.map2.layers.DownloadedAreaLayer
 import de.westnordost.streetcomplete.screens.main.map2.layers.FocusedGeometryLayers
 import de.westnordost.streetcomplete.screens.main.map2.layers.GeometryMarkersLayers
@@ -32,6 +34,8 @@ fun Map(
     geometryMarkers: Collection<Marker> = emptyList(),
     focusedGeometry: ElementGeometry? = null,
     pins: Collection<Pin> = emptyList(),
+    location: Location? = null,
+    rotation: Float? = null,
 ) {
     MaplibreMap(
         modifier = modifier,
@@ -56,6 +60,7 @@ fun Map(
                 GeometryMarkersLayers(geometryMarkers)
                 focusedGeometry?.let { FocusedGeometryLayers(it) }
                 PinsLayers(pins)
+                location?.let { CurrentLocationLayers(it, rotation) }
             },
         )
     }
