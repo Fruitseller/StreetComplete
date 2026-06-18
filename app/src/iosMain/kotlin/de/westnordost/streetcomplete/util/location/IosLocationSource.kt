@@ -63,7 +63,7 @@ private fun CLLocation.toLocation(): Location {
     val (lat, lon) = coordinate.useContents { latitude to longitude }
     return Location(
         position = LatLon(latitude = lat, longitude = lon),
-        accuracy = horizontalAccuracy.toFloat(),
+        accuracy = maxOf(0f, horizontalAccuracy.toFloat()),
         // monotonic (like Android's elapsedRealtimeNanos), NOT wall-clock, so RecentLocations dedup works
         elapsedDuration = NSProcessInfo.processInfo.systemUptime.seconds,
         bearing = if (course >= 0.0) course.toFloat() else null,
