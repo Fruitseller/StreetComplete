@@ -1,5 +1,6 @@
 package de.westnordost.streetcomplete.util.location
 
+import de.westnordost.streetcomplete.data.location.Compass
 import de.westnordost.streetcomplete.data.location.LocationSource
 import org.koin.dsl.module
 
@@ -7,4 +8,5 @@ import org.koin.dsl.module
  *  is not loaded on Android, so these interfaces are never resolved there. */
 val iosLocationModule = module {
     single<LocationSource> { IosLocationSource() }
+    single<Compass> { IosCompass() }
 }

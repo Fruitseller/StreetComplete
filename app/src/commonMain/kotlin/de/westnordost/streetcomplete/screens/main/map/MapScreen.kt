@@ -43,6 +43,8 @@ fun MapScreen(onClickBack: () -> Unit) {
     val location by viewModel.location.collectAsState()
     val locationState by viewModel.locationState.collectAsState()
     val isFollowing by viewModel.isFollowing.collectAsState()
+    val rotation by viewModel.rotation.collectAsState()
+    val isNavigationMode by viewModel.isNavigationMode.collectAsState()
 
     val prefs: Preferences = koinInject()
     val cameraState = rememberCameraState(
@@ -76,7 +78,7 @@ fun MapScreen(onClickBack: () -> Unit) {
 
     // Follow mode: recenter on each fix; zoom to 18 on the first fix if zoomed out past 17.
     var zoomedYet by remember { mutableStateOf(false) }
-    LaunchedEffect(isFollowing, location) {
+    LaunchedEffect(isFollowing, isNavigationMode, location) {
         if (!isFollowing) { zoomedYet = false; return@LaunchedEffect }
         val loc = location ?: return@LaunchedEffect
         val current = cameraState.position
@@ -86,13 +88,17 @@ fun MapScreen(onClickBack: () -> Unit) {
             current.copy(
                 target = Position(longitude = loc.position.longitude, latitude = loc.position.latitude),
                 zoom = zoom,
+                // navigation mode: rotate the map to the GPS course + tilt; normal mode keeps bearing, no tilt.
+                // Exiting navigation mode keeps the last bearing (matches Android) and drops the tilt.
+                bearing = if (isNavigationMode) (loc.bearing?.toDouble() ?: current.bearing) else current.bearing,
+                tilt = if (isNavigationMode) 60.0 else 0.0,
             ),
             duration = 600.milliseconds,
         )
     }
 
     // User pan drops follow mode (programmatic follow animations report PROGRAMMATIC, not GESTURE).
-    LaunchedEffect(Unit) {
+    LaunchedEffect(cameraState) {
         snapshotFlow { cameraState.moveReason }
             .distinctUntilChanged()
             .collect { reason ->
@@ -111,7 +117,7 @@ fun MapScreen(onClickBack: () -> Unit) {
             focusedGeometry = focusedGeometry,
             pins = pins,
             location = location,
-            rotation = null, // heading arrow arrives in M3b.3b
+            rotation = rotation?.let { (it - cameraState.position.bearing.toFloat()) },
         )
         IconButton(
             onClick = onClickBack,
@@ -121,6 +127,7 @@ fun MapScreen(onClickBack: () -> Unit) {
             onClick = viewModel::onClickLocationButton,
             state = locationState,
             isFollowing = isFollowing,
+            isNavigationMode = isNavigationMode,
             modifier = Modifier.align(Alignment.BottomEnd).safeDrawingPadding().padding(16.dp),
         )
     }
