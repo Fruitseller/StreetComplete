@@ -241,10 +241,23 @@ Position + Auto-Zoom/Follow; **Heading-Pfeil dreht beim physischen Drehen des Te
 (3. Tipp: Tilt + Karte rotiert zur Fahrtrichtung; nochmal Tippen: Tilt weg, Bearing bleibt); Pan → Follow aus.
 (Kompass + Nav sind auf dem Simulator NICHT verifizierbar — kein Magnetometer, 3-Tipp-Toggle nicht skriptbar.)
 
+**Code-Review (xhigh, `--fix`, Commit `0765e857f`):** 10-Winkel-Review des M3b.3-Diffs (alle Findings
+bestätigt, auf 7 Ursachen reduziert), Fixes angewandt + Simulator-verifiziert (Dot rendert weiter):
+(1) `IosLocationSource.distanceFilter = 1m` (Android-Parität) — GPS-Rausch-Samples brachen sonst ständig die
+Follow-Animation ab; (2) `stop()` setzt `_location = null` — der Singleton überlebt das VM, sonst sprang die
+Kamera beim Wieder-Öffnen auf eine veraltete Position; (3) `zoomedYet` erst NACH `animateTo` gesetzt — ein Fix
+mitten im Initial-Zoom strandete die Kamera sonst bei Zwischen-Zoom; (4) Kamera-Persistenz NICHT während Follow
+(schrieb sonst Tilt=60/Heading ~1 Hz in die Prefs); (5) Nav-Toggle nur bei `UPDATING` (Race im kurzen
+ENABLED-Fenster); (6) „Following"-Highlight nur wenn Location enabled; (7) `IosCompass` fährt einen billigen
+groben Location-Stream mit, damit `trueHeading` (mit Deklination) gültig wird statt `magneticHeading`.
+
 **ZURÜCKGESTELLT (Backlog, kein Blocker):** **kein pause-on-background** für die Sensoren — Updates starten bei
 Permission und stoppen erst in `onCleared()` (Android stoppt in `onPause`/startet in `onResume`). Kein
 permanentes Leak (`onCleared()` stoppt beide Manager), aber Akku-Drain im Hintergrund; für eine spätere
-Iteration mit Lifecycle-Parität vorgemerkt. Offline-Tiles (#6072) weiterhin zurückgestellt.
+Iteration mit Lifecycle-Parität vorgemerkt. **`Location.elapsedDuration`** stempelt aktuell die Lieferzeit
+(`systemUptime`) statt das Fix-Alter (`CLLocation.timestamp`) — latent, solange `RecentLocations`/`SurveyChecker`
+auf iOS nicht verdrahtet sind; braucht eine in K/N auflösbare NSDate-Intervall-API (timeIntervalSince* lösen hier
+nicht auf). Offline-Tiles (#6072) weiterhin zurückgestellt.
 
 ---
 
