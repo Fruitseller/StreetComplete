@@ -108,7 +108,11 @@ class MapViewModel(
                 locationSource.requestPermission()
             }
             !isFollowing.value -> setFollowing(true)
-            else -> setNavigationMode(!_isNavigationMode.value)
+            // navigation mode only makes sense once we're actually receiving fixes. Requiring UPDATING
+            // also avoids a fast tap in the brief ENABLED window (permission held, tracking not yet
+            // started) wrongly toggling navigation instead of (re-)following.
+            locationState.value == LocationState.UPDATING -> setNavigationMode(!_isNavigationMode.value)
+            else -> setFollowing(true)
         }
     }
 
