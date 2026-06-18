@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import de.westnordost.streetcomplete.ApplicationConstants
 import de.westnordost.streetcomplete.data.download.tiles.DownloadedTilesSource
 import de.westnordost.streetcomplete.data.download.tiles.TilePos
+import de.westnordost.streetcomplete.data.location.Compass
 import de.westnordost.streetcomplete.data.location.Location
 import de.westnordost.streetcomplete.data.location.LocationSource
 import de.westnordost.streetcomplete.data.osm.geometry.ElementGeometry
@@ -26,6 +27,7 @@ import kotlinx.coroutines.withContext
 class MapViewModel(
     private val downloadedTilesSource: DownloadedTilesSource,
     private val locationSource: LocationSource,
+    private val compass: Compass,
     private val prefs: Preferences,
 ) : ViewModel() {
 
@@ -46,6 +48,11 @@ class MapViewModel(
 
     private val _isFollowing = MutableStateFlow(prefs.mapIsFollowing)
     val isFollowing: StateFlow<Boolean> = _isFollowing.asStateFlow()
+
+    val rotation: StateFlow<Float?> = compass.rotation
+
+    private val _isNavigationMode = MutableStateFlow(prefs.mapIsNavigationMode)
+    val isNavigationMode: StateFlow<Boolean> = _isNavigationMode.asStateFlow()
 
     private val _trackingRequested = MutableStateFlow(false)
     private var pendingFollowOnGrant = false
@@ -78,6 +85,7 @@ class MapViewModel(
             locationSource.hasPermission.collect { granted ->
                 if (granted && !_trackingRequested.value) {
                     locationSource.start()
+                    compass.start()
                     _trackingRequested.value = true
                     if (pendingFollowOnGrant) { setFollowing(true); pendingFollowOnGrant = false }
                 }
@@ -94,18 +102,24 @@ class MapViewModel(
     }
 
     fun onClickLocationButton() {
-        if (!locationState.value.isEnabled) {
-            pendingFollowOnGrant = true
-            locationSource.requestPermission()
-        } else {
-            // M3b.3b adds: if already following, toggle navigation mode instead.
-            setFollowing(true)
+        when {
+            !locationState.value.isEnabled -> {
+                pendingFollowOnGrant = true
+                locationSource.requestPermission()
+            }
+            !isFollowing.value -> setFollowing(true)
+            else -> setNavigationMode(!_isNavigationMode.value)
         }
     }
 
     fun setFollowing(value: Boolean) {
         _isFollowing.value = value
         prefs.mapIsFollowing = value
+    }
+
+    fun setNavigationMode(value: Boolean) {
+        _isNavigationMode.value = value
+        prefs.mapIsNavigationMode = value
     }
 
     fun putGeometryMarkers(markers: List<Marker>) { _geometryMarkers.value = markers }
@@ -116,5 +130,6 @@ class MapViewModel(
     override fun onCleared() {
         downloadedTilesSource.removeListener(downloadedTilesListener)
         locationSource.stop()
+        compass.stop()
     }
 }
