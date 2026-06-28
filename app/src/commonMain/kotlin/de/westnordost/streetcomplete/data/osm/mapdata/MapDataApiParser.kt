@@ -2,13 +2,12 @@ package de.westnordost.streetcomplete.data.osm.mapdata
 
 import de.westnordost.streetcomplete.util.ktx.attribute
 import de.westnordost.streetcomplete.util.ktx.attributeOrNull
+import de.westnordost.streetcomplete.data.xmlReader
 import kotlinx.io.Source
 import kotlinx.serialization.SerializationException
 import nl.adaptivity.xmlutil.EventType.END_ELEMENT
 import nl.adaptivity.xmlutil.EventType.START_ELEMENT
 import nl.adaptivity.xmlutil.XmlReader
-import nl.adaptivity.xmlutil.core.kxio.newReader
-import nl.adaptivity.xmlutil.xmlStreaming
 import kotlin.time.Instant
 
 class MapDataApiParser {
@@ -16,10 +15,10 @@ class MapDataApiParser {
         source: Source,
         ignoreRelation: (tags: Map<String, String>) -> Boolean = { false }
     ): MutableMapData =
-        xmlStreaming.newReader(source).parseMapData(ignoreRelation)
+        xmlReader(source).parseMapData(ignoreRelation)
 
     fun parseElementUpdates(source: Source): Map<ElementKey, ElementUpdate> =
-        xmlStreaming.newReader(source).parseElementUpdates()
+        xmlReader(source).parseElementUpdates()
 }
 
 private fun XmlReader.parseMapData(ignoreRelation: (tags: Map<String, String>) -> Boolean): MutableMapData = try {
