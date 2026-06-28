@@ -1,4 +1,72 @@
-# iOS-Port Backlog (Stand: … + M4.0–M4.2, 2026-06-28)
+# iOS-Port Backlog (Stand: … + Re-Sync auf neuen Upstream + M4.0–M4.2, 2026-06-28)
+
+## ✅ RE-SYNC auf neuen Upstream ABGESCHLOSSEN (2026-06-28) — Fork auf `compose-quest-form`-Tip rebased
+
+Unsere komplette iOS-Port-Arbeit (M1–M4) wurde **linear per `git rebase --onto` auf den aktuellen
+`upstream/compose-quest-form`-Stand neu aufgesetzt** (keine Merge-Commits). Link-Gate grün, Simulator
+end-to-end verifiziert (Download + Quest-Pins). Sicherung: Tag `pre-resync-2026-06-28` + Branch
+`backup/pre-resync` (alter Tip `d8972bf94`). Ledger: `.git/sdd/resync-progress.md`.
+
+**Basiswahl (mit Nutzer bestätigt — Option A):** `upstream/compose-quest-form` (`4d6c6f092`, 2026-06-27),
+unsere historische Basis (#6842). Begründung: cqf ist ein **Superset von master** (master hatte nur 5
+Commits, die nicht in cqf sind) und enthält den 133-Commit-Quest-Form-Rewrite, auf dem unsere iOS-Quest-
+Shims aufbauen. Ein Rebase auf `upstream/master` hätte den Rewrite weggeworfen → keine Option für iOS.
+Mechanismus: `git rebase --onto upstream/compose-quest-form 1f0ea5dcf master` auf Branch `resync`, danach
+`master` per Ref-Move auf `resync` (alter Tip gesichert).
+
+**Replay:** 78 Commits, davon **3 automatisch gedroppt** (patch-id bzw. leer): `c6e06e863`/`70b2301bf`
+(unsere master-Testfix-Cherrypicks — jetzt als `1025fbb3b`/`7e4179342` in cqf) und `91bcad9e8`
+(CopyStringsTask-Fix — Upstream hat denselben Fix als `DOT_MATCHES_ALL` schon drin). Keine Merge-Commits.
+
+**TOOLCHAIN-BUMP aus cqf (+47 Commits) — adoptiert, KEIN maplibre-fork-Rebuild nötig:**
+Kotlin 2.3.20→**2.4.0**, Compose-Compiler 2.3.20→**2.4.0**, AGP 8.11.2→**8.13.2**, JetBrains-Compose
+1.10.3→**1.11.1**, atomicfu 0.32.1→0.33.0, koin-bom 4.2.1→4.2.2, ktor 3.4.2→**3.5.0**, Kermit 2.1.0 neu,
+Android-MapLibre→`android-sdk-opengl:13.3.0` (nur androidMain). Gradle-Wrapper unverändert (8.14, JDK 21).
+**Der lokale `maplibre-compose:0.13.0-sc1`-Fork (gebaut mit Kotlin 2.3.21) ist mit Kotlin-2.4.0-Consumern
+KOMPATIBEL — kein Republish nötig**; `spmForKmp 1.9.1`-cinterop läuft mit K/N 2.4.0. (Risiko war im Plan
+markiert; Link-Gate hat es entkräftet.)
+
+**Konflikte aufgelöst (intent-aware):**
+- `buildSrc/CopyStringsTask.kt`: Upstream-Version genommen (enthält unseren `DOT_MATCHES_ALL`-Fix bereits
+  + `MULTILINE`) → unser Commit redundant/gedroppt.
+- `app/build.gradle.kts` plugins: **beide Seiten gemerged** — Upstreams Versions-Bumps + neue Plugins
+  (`dev.mokkery`, `kotlin.plugin.allopen`) UND unser `id("io.github.frankois944.spmForKmp")`.
+- `UrlConfigQRCodeDialog.kt` + `LoginScreen.kt`: **Upstream-Version genommen — die fallengelassenen Toasts
+  sind WIEDER DA.** Upstream hat eine multiplatform `ToastPopup`-Lösung (`a6bb27c01`) implementiert, die
+  unsere TODO-markierten „url copied"- + Login-Fehler-Toasts ersetzt (commonMain → läuft auch auf iOS).
+- `OsmQuestFormContainer.kt`: unser `8bbe12bc3` (bare `TODO`→`TODO()`, `composeNote()`→`TODO()`) wurde von
+  git auf den umbenannten Pfad (`bottom_sheet/quest/`) angewandt und ist **weiterhin nötig + korrekt** —
+  cqfs Version hat dort weiterhin nicht-kompilierende bare `TODO` + ein in commonMain unauflösbares
+  `composeNote()`. **Quest-ANTWORT-Commit-Pfad bleibt Upstream-WIP** (alles `TODO()`), iOS-Quest-Beantwortung
+  also weiterhin blockiert; M4-„display-first" bleibt richtig.
+
+**Zwei neue Integrations-Fix-Commits oben drauf (Link-Gate-validiert):**
+- `Re-sync: dedup copyStringsToAndroid task …`: der Rebase-Auto-Merge hinterließ ZWEI identische
+  `copyStringsToAndroid`-Task-Registrierungen (unsere + Upstreams ausgelagerte `0ab8d9b0c`) → Overload-
+  Ambiguity, brach die Build-Skript-Kompilierung. Duplikat entfernt.
+- `iOS: adapt locale helpers to Compose 1.11 …`: Compose 1.11 machte
+  `androidx.compose.ui.text.intl.Locale.platformLocale` `internal`. Die geteilten iosMain-Locale/Date/
+  Number-Formatter (Upstreams #6405 + NumberFormatter-Refactor) kompilierten nur auf iOS nicht mehr
+  (Upstream baut iOS nicht). Fix: 11 Aufrufstellen in 8 Dateien auf neuen Helfer
+  `Locale.toNSLocale()` = `NSLocale(localeIdentifier = toLanguageTag())` (verhaltensgleich) umgestellt.
+
+**Gates:** (1) Link `:app:linkDebugFrameworkIosSimulatorArm64` **GRÜN** (3m15s, Kotlin 2.4.0).
+(2) **Simulator end-to-end GRÜN** (frische DB, Pariser Platz/Berlin, zoom 16): `Created 480 quests in
+7.0s` / `Finished download (0.5 km²) in 12.4s`; DB = **480 osm_quests / 40 Quest-Typen / 4 downloaded
+tiles**; Screenshot zeigt **echte per-Typ-Pins** (Uhr/Preisschild/Häkchen) + SC-Vektor-Style +
+Downloaded-Area-Hatching, kein Crash — identisch zur M4-Baseline. (3) **Geräte-Gate offen** (iPhone
+gesperrt; Device-Arch `linkDebugFrameworkIosArm64` als Deploy-Readiness geprüft).
+
+**Reconciliations no-op/bestätigt:** Kermit-Migration ließ das `Log`/`Logger`-Interface + `Log.instances`
+unverändert → unser `IosLogger` + `Log.instances.add(IosLogger())` unverändert gültig. Drei geteilte
+Bugfixes (XmlReaderSource, CountryInfos non-strict yaml, IosDownloadController-Crash-Guard) alle present.
+MapViewModel-8-arg-Koin-Binding + koin-androidx-compose-navigation in androidMain intakt.
+
+**FOLLOW-UPS aus dem Re-Sync:** Geräte-Deploy (Nutzer, Telefon entsperren); origin-Push erst nach Nutzer-OK
+(Backup-Tag/Branch behalten); optional: Toast-Restores auf iOS interaktiv eyeballen (Login-Fehler / URL-
+kopiert). Bestehende M4-Follow-ups (Auto-Sync M4.1b, Pin-Tap M4.3, Perf, Upstream-PR) unverändert offen.
+
+---
 
 ## ✅ M4.0 + M4.1 + M4.2 ABGESCHLOSSEN (2026-06-28) — echte OSM-Daten + Quest-Pins auf der iOS-Karte
 
