@@ -47,6 +47,10 @@ plugins {
 }
 
 repositories {
+    // First: the locally-published patched maplibre-compose fork (0.13.0-sc1). This project-level
+    // block overrides the settings dependencyResolutionManagement repositories for :app, so the
+    // mavenLocal() entry must be repeated here. See the maplibre-compose dependency note below.
+    mavenLocal()
     google()
     mavenCentral()
 }
@@ -177,8 +181,19 @@ kotlin {
                 implementation("org.jetbrains.compose.ui:ui-backhandler:1.10.3")
                 implementation("org.jetbrains.androidx.navigation:navigation-compose:2.9.2")
 
-                // Multiplatform map
-                implementation("org.maplibre.compose:maplibre-compose:0.13.0")
+                // Multiplatform map. NOTE: this is a locally-published patched fork (adds the public
+                // StyleState.addImage/removeImage passthroughs needed for data-driven quest-pin icons
+                // on iOS). It is resolved from mavenLocal() and is NOT on Maven Central. Before a
+                // fresh checkout/CI build, publish it from ../maplibre-compose-fork (tag v0.13.0-sc1):
+                //   git -C ../maplibre-compose-fork checkout v0.13.0-sc1
+                //   ANDROID_HOME=$ANDROID_HOME JAVA_HOME=<jdk-21> ../maplibre-compose-fork/gradlew \
+                //     -p ../maplibre-compose-fork \
+                //     publishKotlinMultiplatformPublicationToMavenLocal \
+                //     publishIosSimulatorArm64PublicationToMavenLocal \
+                //     publishIosArm64PublicationToMavenLocal \
+                //     publishAndroidPublicationToMavenLocal -PsignAllPublications=false
+                // Temporary until the patch lands upstream; see .git/sdd/task-0.1-report.md.
+                implementation("org.maplibre.compose:maplibre-compose:0.13.0-sc1")
 
                 // UI ViewModel
                 implementation("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0")
