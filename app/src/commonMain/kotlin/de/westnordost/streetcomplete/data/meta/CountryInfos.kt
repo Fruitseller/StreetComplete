@@ -33,7 +33,11 @@ class CountryInfos(private val res: Res) {
 
     private fun load(regionCode: String): IncompleteCountryInfo? {
         return runBlocking {
-            res.readYamlOrNull<IncompleteCountryInfo>("files/country_metadata/$regionCode.yml")
+            // pass the non-strict `yaml` so unknown properties in the metadata (e.g. newer keys like
+            // chargingStationSocketTypes not yet modelled in CountryInfo) are ignored rather than
+            // throwing — without this the default strict Yaml.default is used and quest creation
+            // aborts on the first such country file.
+            res.readYamlOrNull<IncompleteCountryInfo>("files/country_metadata/$regionCode.yml", yaml)
         }
     }
 }
