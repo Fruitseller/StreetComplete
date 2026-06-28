@@ -159,11 +159,14 @@ class MapViewModel(
      *  area unless that area is already covered this session, and drives the pins manager. */
     fun onViewportIdle(bbox: BoundingBox?) {
         if (bbox == null) return
+        // Always drive the quest-pins manager (it does its own z16 windowing + dedup), so pins
+        // refresh when panning within an already-downloaded area. Only the DOWNLOAD is dedup-guarded
+        // below (user-initiated bypasses freshness, so guard against re-downloading a covered area).
+        viewport.value = bbox
         val rect = bbox.enclosingTilesRect(16)
         if (lastDownloadedRect?.contains(rect) == true) return
         lastDownloadedRect = rect
         downloadController.download(bbox, isUserInitiated = true)
-        viewport.value = bbox
     }
 
     fun getQuestKey(properties: Map<String, String>): QuestKey? = questPinsManager.getQuestKey(properties)
