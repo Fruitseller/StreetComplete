@@ -9,6 +9,7 @@ import de.westnordost.streetcomplete.data.location.Compass
 import de.westnordost.streetcomplete.data.location.Location
 import de.westnordost.streetcomplete.data.location.LocationSource
 import de.westnordost.streetcomplete.data.osm.geometry.ElementGeometry
+import de.westnordost.streetcomplete.data.osm.mapdata.LatLon
 import de.westnordost.streetcomplete.data.preferences.Preferences
 import de.westnordost.streetcomplete.screens.main.controls.LocationState
 import de.westnordost.streetcomplete.screens.main.map2.layers.Marker
@@ -91,6 +92,8 @@ class MapViewModel(
                 }
             }
         }
+        // TEMP (M4.0 verification — removed in M4.2): a synthetic pin to confirm icon registration.
+        _pins.value = listOf(Pin(LatLon(52.5163, 13.3777), "quest_recycling"))
     }
 
     private fun reloadDownloadedTiles() {

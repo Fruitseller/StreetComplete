@@ -2,6 +2,10 @@ package de.westnordost.streetcomplete.screens.main.map2
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.intl.Locale
 import de.westnordost.streetcomplete.data.download.tiles.TilePos
@@ -37,6 +41,7 @@ fun Map(
     location: Location? = null,
     rotation: Float? = null,
 ) {
+    var styleEpoch by remember { mutableStateOf(0) }
     MaplibreMap(
         modifier = modifier,
         baseStyle = BaseStyle.Json(BASE_STYLE),
@@ -44,6 +49,7 @@ fun Map(
         cameraState = cameraState,
         styleState = styleState,
         options = MapOptions(ornamentOptions = OrnamentOptions.AllDisabled),
+        onMapLoadFinished = { styleEpoch++ },
     ) {
         val languages = listOf(Locale.current.language)
         val colors = if (isSystemInDarkTheme()) MapColors.Night else MapColors.Light
@@ -64,6 +70,7 @@ fun Map(
             },
         )
     }
+    PinImageRegistry(styleState, styleEpoch, pins)
 }
 
 @OptIn(ExperimentalResourceApi::class)
