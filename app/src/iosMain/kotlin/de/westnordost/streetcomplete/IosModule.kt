@@ -10,6 +10,10 @@ import io.ktor.client.HttpClient
 import io.ktor.client.plugins.compression.ContentEncoding
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.http.userAgent
+import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.io.files.FileSystem
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
@@ -56,6 +60,11 @@ val iosModule = module {
 
     // Settings
     single<ObservableSettings> { NSUserDefaultsSettings(NSUserDefaults.standardUserDefaults) }
+
+    // Long-lived app scope (iOS has no Application); used for downloads + preloading.
+    single(named("ApplicationScope")) {
+        CoroutineScope(SupervisorJob() + CoroutineName("Application") + Dispatchers.Default)
+    }
 }
 
 /** Absolute path of an iOS user-domain directory (e.g. Documents, Caches). */
