@@ -29,9 +29,14 @@ import de.westnordost.streetcomplete.data.user.statistics.statisticsModule
 import de.westnordost.streetcomplete.data.user.userModule
 import de.westnordost.streetcomplete.data.visiblequests.visibleQuestsModule
 import de.westnordost.streetcomplete.data.weeklyosm.weeklyOsmModule
+import de.westnordost.streetcomplete.data.Preloader
 import de.westnordost.streetcomplete.iosControllersModule
 import de.westnordost.streetcomplete.iosModule
 import de.westnordost.streetcomplete.util.location.iosLocationModule
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import org.koin.core.qualifier.named
+import org.koin.mp.KoinPlatform
 import de.westnordost.streetcomplete.overlays.overlaysModule
 import de.westnordost.streetcomplete.quests.questsModule
 import de.westnordost.streetcomplete.screens.about.aboutScreenModule
@@ -101,5 +106,13 @@ fun initKoin() {
             calendarEventsModule,
             feedsModule,
         )
+    }
+
+    // Warm CountryBoundaries + FeatureDictionary before any download/quest evaluation,
+    // mirroring StreetCompleteApplication.onCreate. Behind the koinStarted guard so a
+    // UIViewController recreation does not re-launch it.
+    val koin = KoinPlatform.getKoin()
+    koin.get<CoroutineScope>(named("ApplicationScope")).launch {
+        koin.get<Preloader>().preload()
     }
 }
