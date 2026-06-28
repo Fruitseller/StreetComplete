@@ -3,12 +3,16 @@ package de.westnordost.streetcomplete.screens.main.map
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import de.westnordost.streetcomplete.ApplicationConstants
+import de.westnordost.streetcomplete.data.download.DownloadController
 import de.westnordost.streetcomplete.data.download.tiles.DownloadedTilesSource
 import de.westnordost.streetcomplete.data.download.tiles.TilePos
+import de.westnordost.streetcomplete.data.download.tiles.TilesRect
+import de.westnordost.streetcomplete.data.download.tiles.enclosingTilesRect
 import de.westnordost.streetcomplete.data.location.Compass
 import de.westnordost.streetcomplete.data.location.Location
 import de.westnordost.streetcomplete.data.location.LocationSource
 import de.westnordost.streetcomplete.data.osm.geometry.ElementGeometry
+import de.westnordost.streetcomplete.data.osm.mapdata.BoundingBox
 import de.westnordost.streetcomplete.data.osm.mapdata.LatLon
 import de.westnordost.streetcomplete.data.preferences.Preferences
 import de.westnordost.streetcomplete.screens.main.controls.LocationState
@@ -30,6 +34,7 @@ class MapViewModel(
     private val locationSource: LocationSource,
     private val compass: Compass,
     private val prefs: Preferences,
+    private val downloadController: DownloadController,
 ) : ViewModel() {
 
     private val _downloadedTiles = MutableStateFlow<List<TilePos>>(emptyList())
@@ -133,6 +138,20 @@ class MapViewModel(
     fun clearGeometryMarkers() { _geometryMarkers.value = emptyList() }
     fun setFocusedGeometry(geometry: ElementGeometry?) { _focusedGeometry.value = geometry }
     fun setPins(pins: List<Pin>) { _pins.value = pins }
+
+    // Last area requested for download this session — avoid re-downloading a contained area
+    // (user-initiated downloads bypass the freshness check, so guard here).
+    private var lastDownloadedRect: TilesRect? = null
+
+    /** Called on camera-idle at zoom >= 14. Triggers a user-initiated download of the visible
+     *  area unless that area is already covered this session. (Extended in M4.2 to drive pins.) */
+    fun onViewportIdle(bbox: BoundingBox?) {
+        if (bbox == null) return
+        val rect = bbox.enclosingTilesRect(16)
+        if (lastDownloadedRect?.contains(rect) == true) return
+        lastDownloadedRect = rect
+        downloadController.download(bbox, isUserInitiated = true)
+    }
 
     override fun onCleared() {
         downloadedTilesSource.removeListener(downloadedTilesListener)

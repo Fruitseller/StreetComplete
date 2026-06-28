@@ -20,8 +20,10 @@ import de.westnordost.streetcomplete.data.osm.mapdata.LatLon
 import de.westnordost.streetcomplete.data.preferences.Preferences
 import de.westnordost.streetcomplete.screens.main.controls.LocationStateButton
 import de.westnordost.streetcomplete.screens.main.map2.Map
+import de.westnordost.streetcomplete.screens.main.map2.toBoundingBox
 import de.westnordost.streetcomplete.ui.common.BackIcon
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNot
 import kotlinx.coroutines.flow.map
 import kotlin.time.Duration.Companion.milliseconds
@@ -113,6 +115,34 @@ fun MapScreen(onClickBack: () -> Unit) {
                     viewModel.setFollowing(false)
                 }
             }
+    }
+
+    // Trigger a download (and, from M4.2, quest-pin fetch) of the visible area on camera-idle at
+    // zoom >= 14. Read projection in the collect (it is not Compose snapshot state); trigger on
+    // position/isCameraMoving (which are). Emit only at zoom >= 14; retain below so clusters stay.
+    LaunchedEffect(cameraState) {
+        snapshotFlow {
+            Triple(cameraState.isCameraMoving, cameraState.position.zoom, cameraState.position.target)
+        }
+            .filterNot { it.first }
+            .filter { it.second >= 14.0 }
+            .distinctUntilChanged()
+            .collect {
+                viewModel.onViewportIdle(
+                    cameraState.projection?.queryVisibleBoundingBox()?.toBoundingBox()
+                )
+            }
+    }
+
+    // The snapshotFlow above can miss the very first idle (projection is null until the map has
+    // laid out, and it isn't Compose snapshot state so it doesn't re-emit). Await the projection
+    // once on open and fire an initial viewport update, so data downloads (and, from M4.2, quest
+    // pins load) on a static map open without requiring a pan.
+    LaunchedEffect(cameraState) {
+        val projection = cameraState.awaitProjection()
+        if (cameraState.position.zoom >= 14.0) {
+            viewModel.onViewportIdle(projection.queryVisibleBoundingBox().toBoundingBox())
+        }
     }
 
     Box(Modifier.fillMaxSize()) {

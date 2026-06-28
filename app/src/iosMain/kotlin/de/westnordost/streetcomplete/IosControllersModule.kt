@@ -6,6 +6,9 @@ import de.westnordost.streetcomplete.data.maptiles.MapTilesDownloader
 import de.westnordost.streetcomplete.data.osm.edits.upload.changesets.ChangesetAutoCloser
 import de.westnordost.streetcomplete.data.osm.mapdata.BoundingBox
 import de.westnordost.streetcomplete.data.upload.UploadController
+import de.westnordost.streetcomplete.util.logs.Log
+import kotlin.concurrent.Volatile
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -42,12 +45,26 @@ private class IosDownloadController(
     private val downloader: Downloader,
     private val scope: CoroutineScope,
 ) : DownloadController {
-    private var job: Job? = null
+    // @Volatile: download() may be called from any thread; the scope's coroutine writes it too.
+    @Volatile private var job: Job? = null
     override fun download(bbox: BoundingBox, isUserInitiated: Boolean) {
         if (isUserInitiated) job?.cancel()
         else if (job?.isActive == true) return
-        job = scope.launch { downloader.download(bbox, isUserInitiated) }
+        job = scope.launch {
+            // The Downloader rethrows on error; on the app scope an uncaught throw crashes the app.
+            // Swallow real failures (already logged + reported by the Downloader) but let
+            // CancellationException propagate so REPLACE (a newer user-initiated download) works.
+            try {
+                downloader.download(bbox, isUserInitiated)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "Download failed", e)
+            }
+        }
     }
+
+    companion object { private const val TAG = "IosDownloadController" }
 }
 
 private class IosChangesetAutoCloserStub : ChangesetAutoCloser {
