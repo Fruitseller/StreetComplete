@@ -1,3 +1,97 @@
+# iOS-Port Backlog (Stand: … + M4.0–M4.2, 2026-06-28)
+
+## ✅ M4.0 + M4.1 + M4.2 ABGESCHLOSSEN (2026-06-28) — echte OSM-Daten + Quest-Pins auf der iOS-Karte
+
+**Das Kernziel ist erreicht (Simulator-verifiziert):** Karte öffnen → Daten für den sichtbaren Bereich
+werden heruntergeladen → **echte Quest-Pins mit korrekten per-Quest-Typ-Icons erscheinen** (Uhr / Preis-
+schild / Häkchen / …). Spec: `docs/superpowers/specs/2026-06-28-ios-port-m4-data-and-quests-design.md`,
+Plan: `docs/superpowers/plans/2026-06-28-ios-port-m4-data-and-quests.md`. Umgesetzt via
+subagent-driven-development (fresh implementer + Spec/Quality-Review je Task) + Whole-Branch-Review
+(opus) = **READY TO MERGE** (kein Critical/Important).
+
+**E2E-Beweis (Simulator, frische DB, Berlin/Pariser Platz):** `Finished download in 4.0s`; DB =
+25655 nodes / 4365 ways / 120 relations / 2 notes / **480 osm_quests über 40 Quest-Typen** / 4
+downloaded_tiles; Screenshot zeigt echte per-Typ-Pins. M4.0-Icons + M4.1-Download + M4.2-Pins arbeiten
+end-to-end zusammen.
+
+### M4.0 — Quest-Pin-Icon-Registrierung (Commits `ef76111d6`)
+- **maplibre-compose 0.13.0 hatte `Style.addImage(id, ImageBitmap, sdf, …)` schon implementiert + public**
+  — nur unerreichbar, weil `StyleState.styleNode` `private` ist. **2-Methoden-Patch** (`StyleState.addImage`/
+  `removeImage` Passthrough) auf einem **lokalen Fork** (`/Users/piotr/git/maplibre-compose-fork`, Tag
+  `v0.13.0-sc1` auf Commit `afc5c828`). **Konsum via `publishToMavenLocal` (Option D)**, NICHT Composite-Build:
+  hält die StreetComplete-Toolchain unangetastet (Gradle 8.14 / AGP 8.11.2 / Kotlin 2.3.20) — der Composite
+  hätte einen App-weiten Gradle-9/AGP-9-Zwang + eine Android-Resolve-Regression erzeugt. `mavenLocal()` in
+  **beiden** Repos-Blöcken (settings.gradle.kts + app/build.gradle.kts — der App-Block überschreibt die
+  settings-Repos für `:app`), Dependency auf `…:0.13.0-sc1`.
+  ⚠️ **REPRODUZIERBARKEIT:** `0.13.0-sc1` ist nur lokal. Ein frischer Checkout/CI muss den Fork zuerst
+  publishen (Sibling `../maplibre-compose-fork` @ Tag `v0.13.0-sc1`, JDK 21, ANDROID_HOME) — dokumentiert in
+  Commit + Build-Datei-Kommentaren. **Upstream-PR steht noch aus (Task 0.4, non-blocking).**
+- **commonMain `PinImage.kt`:** Port von Androids `createPinBitmap` auf eine Compose-Canvas (Schatten + Pin
+  + Quest-Icon, 71dp, non-SDF) + `rememberPinBitmap` + `DrawableResource.pinImageName()` (Name↔Resource
+  über `Res.allDrawableResources`, Round-Trip garantiert) + `@Composable PinImageRegistry` (lazy, dedup
+  pro `(styleEpoch, name)`, Re-Registrierung bei Style-Reload via `onMapLoadFinished`-Epoch).
+- Simulator-verifiziert: synthetischer Recycling-Pin rendert (Icon, nicht leer).
+
+### M4.1 — Daten-Download (Commits `73a82349b`, `8d31cc343`, `2e2b4998d`, `538118b81`)
+- **`ApplicationScope`** (Koin single, `SupervisorJob + Dispatchers.Default`) + **`Preloader.preload()`** beim
+  Start (hinter dem `koinStarted`-Guard in `initKoin()`) — wärmt CountryBoundaries + FeatureDictionary.
+- **Echter `IosDownloadController`** (ersetzt den Stub): launcht den geteilten suspend `Downloader` auf der
+  App-Scope mit Android-Parität REPLACE/KEEP + **Crash-Guard** (try/catch, `CancellationException`
+  rethrow, `@Volatile job`) — ein fehlgeschlagener Download loggt statt die App zu crashen.
+- **Trigger:** `MapScreen` emittiert die sichtbare BBox bei Kamera-Idle (zoom ≥ 14; `projection` im
+  `collect` lesen, nicht im snapshotFlow-Producer) + **`awaitProjection()`-Initial-Fire**, damit beim
+  statischen Karten-Öffnen ohne Pan heruntergeladen wird. `MapViewModel.onViewportIdle` triggert den
+  user-initiated Download mit Session-`contains`-Guard.
+- **ZWEI echte Bugs entlarvt + gefixt (commonMain, plattformneutral):**
+  1. **K/N-XML-Parser-Bug** (`2e2b4998d`): xmlutils `kxio.newReader(Source)` **dekodiert UTF-8 auf
+     Kotlin/Native falsch** — stirbt am ersten Mehrbyte-Zeichen ("ö") mit `XmlException: End of document`.
+     **Hat JEDEN OSM-API-Download auf iOS gekillt.** Fix = `data/XmlReaderSource.kt`
+     (`xmlStreaming.newReader(source.readString())`, also erst zu UTF-8-String dekodieren), 4 Parser
+     migriert (Notes, MapData, User, WeeklyOsm-RSS). **WICHTIGE LEHRE:** Der „72125 von 81833 Bytes"-
+     Trunkierungs-Verdacht war ein **Red Herring** — die Darwin-Engine liefert den vollen Body; ein custom
+     NSURLSession-Engine war weder nötig noch hinreichend. Immer per Isolation beweisen.
+- Simulator-verifiziert: Download landet echte Daten in der DB (25655 nodes etc.) + `DownloadedAreaLayer`.
+
+### M4.2 — Quest-Pins (Commits `325a1ec92`, `52a78c2da`, `25c95728f`, `f2cde3775`)
+- **Separater commonMain `QuestPinsManager`** (Paket `screens.main.map2`, **null maplibre-compose-Imports**):
+  treuer Port des androidMain-`QuestPinsManager` (z16-TilesRect-Windowing, Perf-Guard size>32,
+  `contains`-Check, Pan-Debounce [updateJob cancel vs onUpdated join], Multi-Pin-Retention-Regel, eine Pin
+  pro `markerLocations`, alle `MARKER_*` + `toProperties`/`toQuestKey` wörtlich, inkl. `OsmNoteQuest`,
+  `Dispatchers.IO` für `getAll`). Exponiert `StateFlow<List<Pin>>`.
+- **`MapViewModel`-Integration:** injiziert `VisibleQuestsSource` + `QuestTypeRegistry` +
+  `QuestTypeOrderSource` (das **instanziiert den `OsmQuestController`**, dessen Listener Quests beim
+  Download erzeugt), baut den Manager mit `viewModelScope`, sammelt `manager.pins` → `setPins`, treibt den
+  Viewport aus `onViewportIdle` (vor dem Download-Guard, damit Pins auch beim Pannen im bereits geladenen
+  Bereich aktualisieren — Review-Fix `f2cde3775`), `getQuestKey`-Passthrough, `stop()` in `onCleared`. Den
+  synthetischen M4.0-Pin entfernt. 8-arg Koin-Binding.
+- **DRITTER echter Bug gefixt** (`25c95728f`): `CountryInfos.load()` rief `readYamlOrNull(path)` **ohne** das
+  eigene non-strict `yaml` → der Default-**strikte** `Yaml.default` warf `kaml UnknownPropertyException`
+  (`chargingStationSocketTypes`, ein Metadaten-Key der nicht in `CountryInfo` modelliert ist) → **brach die
+  Quest-Erzeugung ab + rollte die Download-Transaktion zurück** (osm_quests=0, keine Pins). Fix: das
+  non-strict `yaml` durchreichen (entspricht der dokumentierten Absicht; plattformneutral).
+
+**NOCH OFFEN — GERÄTE-GATE (Nutzer-Aktion nötig):** Der Geräte-Build/-Deploy schlug fehl, weil das **iPhone
+gesperrt** ist („device is passcode protected" / „developer disk image could not be mounted" / destination
+timed out) — KEIN Code-/Signing-Problem. Die Geräte-Arch (`linkDebugFrameworkIosArm64`) kompiliert sauber,
+also ist der Code deploy-bereit. **Zum finalen Geräte-Gate: iPhone entsperren (+ entsperrt/vertraut halten),
+dann erneut deployen** (`-allowProvisioningUpdates`, TEAM 2DPUG448BC; Profil lief 2026-06-21 ab → wird
+erneuert). Visuelle Pin-Bestätigung auf dem Gerät ist dann Nutzer-Sache (Map öffnen, Ortung erlauben).
+
+**ZURÜCKGESTELLT / FOLLOW-UPS:**
+- **Quest-Erzeugung ist auf dem Debug-Simulator langsam** (~90s für ~200 Quest-Typen über 25k nodes;
+  `CheckShopExistence` allein 7,7s) und liegt auf dem **Download-Critical-Path** (downloaded_tiles/osm_quests
+  committen erst am Ende). Funktioniert, aber Release/Gerät ist schneller; Perf-Iteration vorgemerkt (Kickoff
+  hatte das markiert).
+- **Whole-Branch-Review-Minors (kein Merge-Blocker):** unused `import kotlinx.coroutines.cancel` in
+  QuestPinsManager; `MapViewModel.setPins`/`getQuestKey` sind aktuell tote öffentliche API (M4.3-Hooks);
+  Import-Reihenfolge in NotesApiParser/MapDataApiParser.
+- **M4.1b Auto-Sync** (GPS-getriebener Download beim Laufen, `IosQuestAutoSyncer` + NWPathMonitor) — wie im
+  Kickoff (Decision 1) geplant, noch offen.
+- **M4.3 Pin-Auswahl** (Tap → `getQuestKey` → `SelectedPinsLayer`-Highlight, display-only) — Stretch, offen.
+- **Upstream-PR** für den maplibre-compose `StyleState.addImage`-Patch (Task 0.4) — vorbereitet, noch zu öffnen.
+
+---
+
 # iOS-Port Backlog (Stand: M1 + Re-Sync + M2 + M3a + M3b.1–M3b.3, 2026-06-18)
 
 ## ✅ M3a ABGESCHLOSSEN — iOS-Navigationsgerüst + Menü-Screens (ohne Karte)
