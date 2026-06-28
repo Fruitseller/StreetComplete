@@ -13,9 +13,13 @@ import de.westnordost.streetcomplete.data.location.Location
 import de.westnordost.streetcomplete.data.location.LocationSource
 import de.westnordost.streetcomplete.data.osm.geometry.ElementGeometry
 import de.westnordost.streetcomplete.data.osm.mapdata.BoundingBox
-import de.westnordost.streetcomplete.data.osm.mapdata.LatLon
 import de.westnordost.streetcomplete.data.preferences.Preferences
+import de.westnordost.streetcomplete.data.quest.QuestKey
+import de.westnordost.streetcomplete.data.quest.QuestTypeRegistry
+import de.westnordost.streetcomplete.data.quest.VisibleQuestsSource
+import de.westnordost.streetcomplete.data.visiblequests.QuestTypeOrderSource
 import de.westnordost.streetcomplete.screens.main.controls.LocationState
+import de.westnordost.streetcomplete.screens.main.map2.QuestPinsManager
 import de.westnordost.streetcomplete.screens.main.map2.layers.Marker
 import de.westnordost.streetcomplete.screens.main.map2.layers.Pin
 import kotlinx.coroutines.Dispatchers
@@ -35,6 +39,9 @@ class MapViewModel(
     private val compass: Compass,
     private val prefs: Preferences,
     private val downloadController: DownloadController,
+    private val visibleQuestsSource: VisibleQuestsSource,
+    private val questTypeRegistry: QuestTypeRegistry,
+    private val questTypeOrderSource: QuestTypeOrderSource,
 ) : ViewModel() {
 
     private val _downloadedTiles = MutableStateFlow<List<TilePos>>(emptyList())
@@ -48,6 +55,11 @@ class MapViewModel(
 
     private val _pins = MutableStateFlow<List<Pin>>(emptyList())
     val pins: StateFlow<List<Pin>> = _pins.asStateFlow()
+
+    private val viewport = MutableStateFlow<BoundingBox?>(null)
+    private val questPinsManager = QuestPinsManager(
+        viewport, visibleQuestsSource, questTypeRegistry, questTypeOrderSource, viewModelScope
+    )
 
     // --- location ---
     val location: StateFlow<Location?> = locationSource.location
@@ -97,8 +109,8 @@ class MapViewModel(
                 }
             }
         }
-        // TEMP (M4.0 verification — removed in M4.2): a synthetic pin to confirm icon registration.
-        _pins.value = listOf(Pin(LatLon(52.5163, 13.3777), "quest_recycling"))
+        questPinsManager.start()
+        viewModelScope.launch { questPinsManager.pins.collect { _pins.value = it } }
     }
 
     private fun reloadDownloadedTiles() {
@@ -144,16 +156,20 @@ class MapViewModel(
     private var lastDownloadedRect: TilesRect? = null
 
     /** Called on camera-idle at zoom >= 14. Triggers a user-initiated download of the visible
-     *  area unless that area is already covered this session. (Extended in M4.2 to drive pins.) */
+     *  area unless that area is already covered this session, and drives the pins manager. */
     fun onViewportIdle(bbox: BoundingBox?) {
         if (bbox == null) return
         val rect = bbox.enclosingTilesRect(16)
         if (lastDownloadedRect?.contains(rect) == true) return
         lastDownloadedRect = rect
         downloadController.download(bbox, isUserInitiated = true)
+        viewport.value = bbox
     }
 
+    fun getQuestKey(properties: Map<String, String>): QuestKey? = questPinsManager.getQuestKey(properties)
+
     override fun onCleared() {
+        questPinsManager.stop()
         downloadedTilesSource.removeListener(downloadedTilesListener)
         locationSource.stop()
         compass.stop()
