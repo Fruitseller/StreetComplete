@@ -48,6 +48,7 @@ fun PinsLayers(
     pins: Collection<Pin>,
     onClickPin: FeaturesClickHandler? = null,
     onClickCluster: FeaturesClickHandler? = null,
+    visible: Boolean = true,
 ) {
     // TODO is this recomposed all the time? In that case, remember the features
     val source = rememberGeoJsonSource(
@@ -64,6 +65,7 @@ fun PinsLayers(
         source = source,
         minZoom = CLUSTER_MIN_ZOOM.toFloat(),
         maxZoom = CLUSTER_MAX_ZOOM.toFloat(),
+        visible = visible,
         filter = all(
             zoom() gte const(CLUSTER_MIN_ZOOM),
             zoom() lte const(CLUSTER_MAX_ZOOM),
@@ -85,6 +87,7 @@ fun PinsLayers(
         id = "pin-dot-layer",
         source = source,
         minZoom = CLUSTER_MIN_ZOOM.toFloat(),
+        visible = visible,
         filter = any(
             zoom() gt const(CLUSTER_MAX_ZOOM),
             all(
@@ -103,6 +106,7 @@ fun PinsLayers(
         id = "pins-layer",
         source = source,
         minZoom = CLUSTER_MAX_ZOOM.toFloat(),
+        visible = visible,
         filter = zoom() gt const(CLUSTER_MAX_ZOOM),
         sortKey = feature["icon-order"].convertToNumber(),
         iconImage = image(feature["icon-image"].asString()), // TODO

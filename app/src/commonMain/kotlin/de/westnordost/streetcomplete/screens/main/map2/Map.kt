@@ -12,6 +12,7 @@ import de.westnordost.streetcomplete.data.download.tiles.TilePos
 import de.westnordost.streetcomplete.data.location.Location
 import de.westnordost.streetcomplete.data.osm.geometry.ElementGeometry
 import de.westnordost.streetcomplete.resources.Res
+import de.westnordost.streetcomplete.screens.main.map.QuestSelection
 import de.westnordost.streetcomplete.screens.main.map2.layers.CurrentLocationLayers
 import de.westnordost.streetcomplete.screens.main.map2.layers.DownloadedAreaLayer
 import de.westnordost.streetcomplete.screens.main.map2.layers.FocusedGeometryLayers
@@ -19,6 +20,7 @@ import de.westnordost.streetcomplete.screens.main.map2.layers.GeometryMarkersLay
 import de.westnordost.streetcomplete.screens.main.map2.layers.Marker
 import de.westnordost.streetcomplete.screens.main.map2.layers.Pin
 import de.westnordost.streetcomplete.screens.main.map2.layers.PinsLayers
+import de.westnordost.streetcomplete.screens.main.map2.layers.SelectedPinsLayer
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.maplibre.compose.camera.CameraState
 import org.maplibre.compose.camera.rememberCameraState
@@ -28,6 +30,9 @@ import org.maplibre.compose.map.OrnamentOptions
 import org.maplibre.compose.style.BaseStyle
 import org.maplibre.compose.style.StyleState
 import org.maplibre.compose.style.rememberStyleState
+import org.maplibre.compose.util.ClickResult
+import org.maplibre.compose.util.FeaturesClickHandler
+import org.maplibre.compose.util.MapClickHandler
 
 @Composable
 fun Map(
@@ -38,8 +43,12 @@ fun Map(
     geometryMarkers: Collection<Marker> = emptyList(),
     focusedGeometry: ElementGeometry? = null,
     pins: Collection<Pin> = emptyList(),
+    selectedQuest: QuestSelection? = null,
     location: Location? = null,
     rotation: Float? = null,
+    onClickPin: FeaturesClickHandler? = null,
+    onClickCluster: FeaturesClickHandler? = null,
+    onMapClick: MapClickHandler? = null,
 ) {
     var styleEpoch by remember { mutableStateOf(0) }
     MaplibreMap(
@@ -49,6 +58,7 @@ fun Map(
         cameraState = cameraState,
         styleState = styleState,
         options = MapOptions(ornamentOptions = OrnamentOptions.AllDisabled),
+        onMapClick = onMapClick ?: { _, _ -> ClickResult.Pass },
         onMapLoadFinished = { styleEpoch++ },
     ) {
         val languages = listOf(Locale.current.language)
@@ -65,7 +75,15 @@ fun Map(
             aboveLabelsContent = {
                 GeometryMarkersLayers(geometryMarkers)
                 focusedGeometry?.let { FocusedGeometryLayers(it) }
-                PinsLayers(pins)
+                // Hide normal pins while a quest is selected (Android's hideNonHighlightedPins =
+                // setVisible(false)); the selected pin stays on top via SelectedPinsLayer.
+                PinsLayers(
+                    pins,
+                    onClickPin = onClickPin,
+                    onClickCluster = onClickCluster,
+                    visible = selectedQuest == null,
+                )
+                selectedQuest?.let { SelectedPinsLayer(it.icon, it.markerLocations) }
                 location?.let { CurrentLocationLayers(it, rotation) }
             },
         )
