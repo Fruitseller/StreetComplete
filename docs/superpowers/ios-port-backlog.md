@@ -11,9 +11,9 @@ Tippen auf einen Quest-Pin wählt ihn aus — **getreue Übersetzung von Android
 
 **Zwei Befunde in der Verifikation gefixt:** (1) **Punkt-Geometrie-Over-Zoom** — node-Quests (Mehrheit) haben Null-Flächen-BBox → `animateTo(boundingBox)` zoomt maximal (kontextlos). Fix (`4f2ab56ea`): Punkt → `animateTo(CameraPosition, zoom.coerceIn(18,20))`; Ways/Areas behalten bbox-Fit. **Von der Simulator-Verifikation gefangen.** (2) **maplibre-compose 0.13.0 dispatcht `onMapClick` VOR den Layer-Handlern** (Whole-Branch-Review) → Tap-während-selektiert deselektiert; **Android-treu** (Pins während Selektion ausgeblendet → Reselect = wegtippen-dann-tippen, kein Ein-Tipp; Spec-Szenario 4 war falsch, korrigiert). Persist-Effekt zusätzlich auf `selectedQuest == null` gegated.
 
-**Gates:** Link `linkDebugFrameworkIosSimulatorArm64` GRÜN; **Simulator end-to-end GRÜN** (Pariser Platz, frische DB, synthetische Selektions-Injektion): `Created 482 quests` / `Finished download`, Screenshot zeigt hochskalierten Uhr-Pin + Geometrie-Kreis + andere Pins weg + Kamerafokus bei nutzbarem Zoom, kein Crash. **GERÄTE-ECHT-TAP-TEST OFFEN** (interaktiv, Nutzer — kein `idb`, Simulator-Taps nicht scriptbar).
+**Gates:** Link `linkDebugFrameworkIosSimulatorArm64` GRÜN; **Simulator end-to-end GRÜN** (Pariser Platz, frische DB, synthetische Selektions-Injektion): `Created 482 quests` / `Finished download`, Screenshot zeigt hochskalierten Uhr-Pin + Geometrie-Kreis + andere Pins weg + Kamerafokus bei nutzbarem Zoom, kein Crash. **GERÄTE-ECHT-TAP-TEST BESTANDEN (Nutzer, 2026-06-29):** auf dem iPhone 16 Pro gebaut/installiert/gestartet; Auswahl/Highlight/Geometrie-Fokus/Deselect/Cluster-Zoom alle auf echter Hardware bestätigt.
 
-**Offen / Follow-ups:** Geräte-Tap-Test (Nutzer); 2 kosmetische Minor zurückgestellt (Import-Reihenfolge, `focusPadding` ohne `remember` — kein ktlint-Gate); Ein-Tipp-Reselect als mögliche spätere Enhancement (un-Android, da Pins-sichtbar-halten nötig). **NÄCHSTES: M4.1b GPS-Auto-Sync.**
+**Offen / Follow-ups:** Geräte-Tap-Test ✅ erledigt (s. o.); 2 kosmetische Minor zurückgestellt (Import-Reihenfolge, `focusPadding` ohne `remember` — kein ktlint-Gate); Ein-Tipp-Reselect als mögliche spätere Enhancement (un-Android, da Pins-sichtbar-halten nötig). **NÄCHSTES: M4.1b GPS-Auto-Sync** (pausiert, wartet auf Nutzer-OK).
 
 ---
 
