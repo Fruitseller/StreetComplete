@@ -225,6 +225,10 @@ fun MapScreen(onClickBack: () -> Unit) {
             onClickCluster = onClickCluster,
             onMapClick = onMapClick,
         )
+        // TODO(M4.x quest form): when the upstream compose-quest-form path unblocks (OsmQuestFormContainer
+        //  commit handlers are currently all TODO()), mount it in a ModalBottomSheet here, driven by
+        //  `selectedQuest`, and pass the sheet height into `focusPadding` above so the geometry sits
+        //  above the sheet (= Android getQuestFormInsets()). No selection/highlight code changes needed.
         IconButton(
             onClick = onClickBack,
             modifier = Modifier.safeDrawingPadding().padding(8.dp),
