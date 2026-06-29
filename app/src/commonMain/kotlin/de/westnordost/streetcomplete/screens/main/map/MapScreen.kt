@@ -23,6 +23,7 @@ import de.westnordost.streetcomplete.data.preferences.Preferences
 import de.westnordost.streetcomplete.screens.main.controls.LocationStateButton
 import de.westnordost.streetcomplete.screens.main.map2.Map
 import de.westnordost.streetcomplete.screens.main.map2.toBoundingBox
+import de.westnordost.streetcomplete.screens.main.map2.toPosition
 import de.westnordost.streetcomplete.ui.common.BackIcon
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -167,6 +168,10 @@ fun MapScreen(onClickBack: () -> Unit) {
             ClickResult.Pass
         }
     }
+    // maplibre-compose 0.13.0 dispatches onMapClick BEFORE layer click handlers, so a tap while a quest
+    // is selected deselects it. Pins are hidden during selection anyway (see Map.kt), so there is no
+    // other pin to re-tap. This matches Android, which also hides all non-selected pins while a quest is
+    // open: switching selection is tap-away (pins reappear) then tap the new pin, not one tap.
     val onMapClick: MapClickHandler = { _, _ ->
         if (viewModel.selectedQuest.value != null) {
             viewModel.clearSelection()
@@ -199,11 +204,25 @@ fun MapScreen(onClickBack: () -> Unit) {
         if (sel != null) {
             // capture once per selection CHAIN — not on reselect — so deselect returns to the origin.
             if (savedCamera == null) savedCamera = cameraState.position
-            cameraState.animateTo(
-                boundingBox = sel.geometry.bounds.toGeoJsonBoundingBox(),
-                padding = focusPadding,
-                duration = 500.milliseconds,
-            )
+            val bounds = sel.geometry.bounds
+            if (bounds.min == bounds.max) {
+                // Point geometry (node quests — the majority): a zero-area bbox makes
+                // animateTo(boundingBox) zoom to the maximum, so focus the point at a sensible,
+                // capped zoom instead (mirrors Android startFocus' zoom handling for points).
+                cameraState.animateTo(
+                    CameraPosition(
+                        target = bounds.min.toPosition(),
+                        zoom = cameraState.position.zoom.coerceIn(18.0, 20.0),
+                    ),
+                    duration = 500.milliseconds,
+                )
+            } else {
+                cameraState.animateTo(
+                    boundingBox = bounds.toGeoJsonBoundingBox(),
+                    padding = focusPadding,
+                    duration = 500.milliseconds,
+                )
+            }
         } else {
             savedCamera?.let { cameraState.animateTo(it, duration = 500.milliseconds) }
             savedCamera = null
