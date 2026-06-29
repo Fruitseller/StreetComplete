@@ -26,12 +26,16 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNot
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.json.JsonPrimitive
 import kotlin.time.Duration.Companion.milliseconds
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.maplibre.compose.camera.CameraMoveReason
 import org.maplibre.compose.camera.CameraPosition
 import org.maplibre.compose.camera.rememberCameraState
+import org.maplibre.compose.util.ClickResult
+import org.maplibre.compose.util.FeaturesClickHandler
+import org.maplibre.compose.util.MapClickHandler
 import org.maplibre.spatialk.geojson.Position
 
 /** iOS map screen (M3b.3a): live location dot + Android-parity GPS button (request → follow). */
@@ -47,6 +51,7 @@ fun MapScreen(onClickBack: () -> Unit) {
     val isFollowing by viewModel.isFollowing.collectAsState()
     val rotation by viewModel.rotation.collectAsState()
     val isNavigationMode by viewModel.isNavigationMode.collectAsState()
+    val selectedQuest by viewModel.selectedQuest.collectAsState()
 
     val prefs: Preferences = koinInject()
     val cameraState = rememberCameraState(
@@ -145,16 +150,40 @@ fun MapScreen(onClickBack: () -> Unit) {
         }
     }
 
+    val onClickPin: FeaturesClickHandler = handler@{ features ->
+        val props = features.firstOrNull()?.properties.orEmpty()
+            .mapNotNull { (k, v) -> (v as? JsonPrimitive)?.let { k to it.content } }
+            .toMap()
+        val questKey = viewModel.getQuestKey(props)
+        if (questKey != null) {
+            viewModel.selectQuest(questKey)
+            ClickResult.Consume
+        } else {
+            ClickResult.Pass
+        }
+    }
+    val onMapClick: MapClickHandler = { _, _ ->
+        if (viewModel.selectedQuest.value != null) {
+            viewModel.clearSelection()
+            ClickResult.Consume
+        } else {
+            ClickResult.Pass
+        }
+    }
+
     Box(Modifier.fillMaxSize()) {
         Map(
             modifier = Modifier.fillMaxSize(),
             cameraState = cameraState,
             downloadedTiles = downloadedTiles,
             geometryMarkers = markers,
-            focusedGeometry = focusedGeometry,
+            focusedGeometry = selectedQuest?.geometry ?: focusedGeometry,
             pins = pins,
+            selectedQuest = selectedQuest,
             location = location,
             rotation = rotation?.let { (it - cameraState.position.bearing.toFloat()) },
+            onClickPin = onClickPin,
+            onMapClick = onMapClick,
         )
         IconButton(
             onClick = onClickBack,
