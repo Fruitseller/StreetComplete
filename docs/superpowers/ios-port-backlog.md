@@ -1,4 +1,33 @@
-# iOS-Port Backlog (Stand: … + Re-Sync auf neuen Upstream + M4.0–M4.2, 2026-06-28)
+# iOS-Port Backlog (Stand: … + Re-Sync + M4.0–M4.2 + Geräte-Gate, 2026-06-29)
+
+## ✅ GERÄTE-GATE BESTANDEN (2026-06-29) — re-synct M4 läuft auf dem iPhone 16 Pro
+
+Das einzige nach dem Re-Sync offene Gate ist durch: das re-syncte M4 (master `4379d4e05`) **baut, signiert,
+installiert, startet und lädt echte Daten auf der echten Hardware** — kein Code-/Signing-Problem hatte je
+vorgelegen (vorher nur das gesperrte iPhone).
+
+- **Build:** `xcodebuild -sdk iphoneos -destination 'platform=iOS,id=00008140-000228491A33001C'
+  -derivedDataPath build/ios-device -allowProvisioningUpdates build` → **BUILD SUCCEEDED**. Profil frisch
+  erneuert via `-allowProvisioningUpdates` (`iOS Team Provisioning Profile: …streetcomplete.ios`,
+  `37192146-…`, TEAM `2DPUG448BC`); App + `StreetComplete.debug.dylib` + eingebettetes `MapLibre.framework`
+  signiert; Geräte-SPM-Pfad `arm64-apple-ios/release` in FRAMEWORK_SEARCH_PATHS. (`rm -rf build/ios-device`
+  davor — Relink-Fallstrick.) Run-Script-Phase setzt `JAVA_HOME` selbst → kein Shell-Env nötig.
+- **Install + Launch:** `xcrun devicectl device install/launch` (Gerät `iPiotr`, devicectl
+  `83B473E9-…`, bundle `de.westnordost.streetcomplete.ios`) → installiert + gestartet.
+- **E2E auf dem Gerät (Düsseldorf, Konsolen-Log via `devicectl … --console`):** mehrere Downloads beim
+  Pannen/Zoomen, **alle crashfrei** — z. B. `Created 829 quests for bbox in 2.1s` /
+  `Finished download (0.5 km²) in 3.1s` / `Persisted 485 new … quests`, mit sauberer Per-Typ-Aufschlüsselung
+  (`AddBuildingType: 116`, `AddMaxSpeed: 3`, `CheckShopExistence: 13`, …). **Keine Exception/Crash/FATAL** in
+  1585 Log-Zeilen. **Nutzer-Sichtbestätigung 2026-06-29: „sieht alles gut aus"** (Karte + per-Typ-Pins).
+- **Perf-Befund: Gerät ist drastisch schneller als der Debug-Simulator** — **1–3 s pro bbox** (statt ~90 s
+  Quest-Erzeugung im Sim). Entschärft das M4-Perf-Follow-up weitgehend.
+
+**OFFEN:** **origin-Push** weiterhin erst nach explizitem Nutzer-OK (Backup-Tag `pre-resync-2026-06-28` +
+Branch `backup/pre-resync` behalten). Reine Entwicklungs-Follow-ups unverändert: M4.3 Pin-Tap, M4.1b
+Auto-Sync, Upstream-PR (maplibre `addImage`), optionales Toast-Eyeballing. **Quest-Beantwortung weiter
+Upstream-WIP-blockiert** (display-first bleibt korrekt).
+
+---
 
 ## ✅ RE-SYNC auf neuen Upstream ABGESCHLOSSEN (2026-06-28) — Fork auf `compose-quest-form`-Tip rebased
 
@@ -54,17 +83,19 @@ markiert; Link-Gate hat es entkräftet.)
 (2) **Simulator end-to-end GRÜN** (frische DB, Pariser Platz/Berlin, zoom 16): `Created 480 quests in
 7.0s` / `Finished download (0.5 km²) in 12.4s`; DB = **480 osm_quests / 40 Quest-Typen / 4 downloaded
 tiles**; Screenshot zeigt **echte per-Typ-Pins** (Uhr/Preisschild/Häkchen) + SC-Vektor-Style +
-Downloaded-Area-Hatching, kein Crash — identisch zur M4-Baseline. (3) **Geräte-Gate offen** (iPhone
-gesperrt; Device-Arch `linkDebugFrameworkIosArm64` als Deploy-Readiness geprüft).
+Downloaded-Area-Hatching, kein Crash — identisch zur M4-Baseline. (3) **Geräte-Gate GRÜN (2026-06-29)** —
+re-synct M4 auf dem iPhone 16 Pro gebaut/installiert/gestartet, Download+Quest-Erzeugung per Konsolen-Log
++ Nutzer-Sichtbestätigung verifiziert (Details in der Top-Sektion „GERÄTE-GATE BESTANDEN").
 
 **Reconciliations no-op/bestätigt:** Kermit-Migration ließ das `Log`/`Logger`-Interface + `Log.instances`
 unverändert → unser `IosLogger` + `Log.instances.add(IosLogger())` unverändert gültig. Drei geteilte
 Bugfixes (XmlReaderSource, CountryInfos non-strict yaml, IosDownloadController-Crash-Guard) alle present.
 MapViewModel-8-arg-Koin-Binding + koin-androidx-compose-navigation in androidMain intakt.
 
-**FOLLOW-UPS aus dem Re-Sync:** Geräte-Deploy (Nutzer, Telefon entsperren); origin-Push erst nach Nutzer-OK
-(Backup-Tag/Branch behalten); optional: Toast-Restores auf iOS interaktiv eyeballen (Login-Fehler / URL-
-kopiert). Bestehende M4-Follow-ups (Auto-Sync M4.1b, Pin-Tap M4.3, Perf, Upstream-PR) unverändert offen.
+**FOLLOW-UPS aus dem Re-Sync:** ~~Geräte-Deploy~~ **ERLEDIGT 2026-06-29** (siehe Top-Sektion); origin-Push
+erst nach Nutzer-OK (Backup-Tag/Branch behalten); optional: Toast-Restores auf iOS interaktiv eyeballen
+(Login-Fehler / URL-kopiert). Bestehende M4-Follow-ups (Auto-Sync M4.1b, Pin-Tap M4.3, Upstream-PR)
+unverändert offen; **M4-Perf weitgehend entschärft** (Gerät 1–3 s/bbox statt ~90 s im Sim).
 
 ---
 
