@@ -22,6 +22,7 @@ import de.westnordost.streetcomplete.screens.main.controls.LocationState
 import de.westnordost.streetcomplete.screens.main.map2.QuestPinsManager
 import de.westnordost.streetcomplete.screens.main.map2.layers.Marker
 import de.westnordost.streetcomplete.screens.main.map2.layers.Pin
+import de.westnordost.streetcomplete.screens.main.map2.pinImageName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -55,6 +56,10 @@ class MapViewModel(
 
     private val _pins = MutableStateFlow<List<Pin>>(emptyList())
     val pins: StateFlow<List<Pin>> = _pins.asStateFlow()
+
+    private val _selectedQuest = MutableStateFlow<QuestSelection?>(null)
+    /** The currently tapped/selected quest, or null. Drives SelectedPinsLayer + geometry focus. */
+    val selectedQuest: StateFlow<QuestSelection?> = _selectedQuest.asStateFlow()
 
     private val viewport = MutableStateFlow<BoundingBox?>(null)
     private val questPinsManager = QuestPinsManager(
@@ -170,6 +175,30 @@ class MapViewModel(
     }
 
     fun getQuestKey(properties: Map<String, String>): QuestKey? = questPinsManager.getQuestKey(properties)
+
+    /** Select the quest with [questKey]: load it off the main thread, build the selection holder.
+     *  No-op if the same quest is already selected (avoids re-running the highlight bounce + camera
+     *  focus when the already-selected pin is tapped). Drops follow mode so the follow animation
+     *  doesn't fight the focus animation (mirrors Android freezing the map while a quest is open). */
+    fun selectQuest(questKey: QuestKey) {
+        if (_selectedQuest.value?.questKey == questKey) return
+        viewModelScope.launch {
+            val quest = withContext(Dispatchers.IO) { visibleQuestsSource.get(questKey) }
+            if (quest == null) {
+                _selectedQuest.value = null
+                return@launch
+            }
+            _selectedQuest.value = QuestSelection(
+                questKey = questKey,
+                icon = quest.type.icon.pinImageName(),
+                markerLocations = quest.markerLocations.toList(),
+                geometry = quest.geometry,
+            )
+            if (_isFollowing.value) setFollowing(false)
+        }
+    }
+
+    fun clearSelection() { _selectedQuest.value = null }
 
     override fun onCleared() {
         questPinsManager.stop()
