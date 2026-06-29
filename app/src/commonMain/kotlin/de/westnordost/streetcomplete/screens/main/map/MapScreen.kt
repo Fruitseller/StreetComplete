@@ -28,6 +28,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNot
 import kotlinx.coroutines.flow.map
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonPrimitive
 import kotlin.time.Duration.Companion.milliseconds
 import org.koin.compose.koinInject
@@ -38,6 +40,7 @@ import org.maplibre.compose.camera.rememberCameraState
 import org.maplibre.compose.util.ClickResult
 import org.maplibre.compose.util.FeaturesClickHandler
 import org.maplibre.compose.util.MapClickHandler
+import org.maplibre.spatialk.geojson.Point
 import org.maplibre.spatialk.geojson.Position
 
 /** iOS map screen (M3b.3a): live location dot + Android-parity GPS button (request → follow). */
@@ -172,6 +175,18 @@ fun MapScreen(onClickBack: () -> Unit) {
             ClickResult.Pass
         }
     }
+    val scope = rememberCoroutineScope()
+    // No cluster-leaf query API on iOS (maplibre-compose 0.13.0 has no getClusterLeaves /
+    // querySourceFeatures), so we cannot fit the leaves' bbox like Android's zoomToCluster. Fallback:
+    // zoom in toward the cluster point past CLUSTER_MAX_ZOOM (=14), which dissolves it into pins.
+    val onClickCluster: FeaturesClickHandler = handler@{ features ->
+        val point = features.firstOrNull()?.geometry as? Point ?: return@handler ClickResult.Pass
+        val zoom = minOf(cameraState.position.zoom + 2.0, 15.0)
+        scope.launch {
+            cameraState.animateTo(CameraPosition(target = point.coordinates, zoom = zoom))
+        }
+        ClickResult.Consume
+    }
 
     // Bottom padding the camera reserves below the focused geometry. 0 for now; when the quest-form
     // bottom sheet lands (upstream-blocked), pass PaddingValues(bottom = sheetHeight) here.
@@ -207,6 +222,7 @@ fun MapScreen(onClickBack: () -> Unit) {
             location = location,
             rotation = rotation?.let { (it - cameraState.position.bearing.toFloat()) },
             onClickPin = onClickPin,
+            onClickCluster = onClickCluster,
             onMapClick = onMapClick,
         )
         IconButton(
