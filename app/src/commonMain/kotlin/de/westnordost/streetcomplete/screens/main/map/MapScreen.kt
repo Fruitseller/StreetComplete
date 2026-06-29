@@ -1,9 +1,11 @@
 package de.westnordost.streetcomplete.screens.main.map
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import de.westnordost.streetcomplete.screens.main.map2.toGeoJsonBoundingBox
 import androidx.compose.material.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -79,7 +81,7 @@ fun MapScreen(onClickBack: () -> Unit) {
             .map { it.second }
             .distinctUntilChanged()
             .collect { pos ->
-                if (viewModel.isFollowing.value) return@collect
+                if (viewModel.isFollowing.value || viewModel.selectedQuest.value != null) return@collect
                 prefs.mapPosition = LatLon(latitude = pos.target.latitude, longitude = pos.target.longitude)
                 prefs.mapZoom = pos.zoom
                 prefs.mapRotation = pos.bearing
@@ -168,6 +170,28 @@ fun MapScreen(onClickBack: () -> Unit) {
             ClickResult.Consume
         } else {
             ClickResult.Pass
+        }
+    }
+
+    // Bottom padding the camera reserves below the focused geometry. 0 for now; when the quest-form
+    // bottom sheet lands (upstream-blocked), pass PaddingValues(bottom = sheetHeight) here.
+    val focusPadding = PaddingValues(bottom = 0.dp)
+
+    // Camera focus on the selected geometry; restore the pre-selection camera on deselect.
+    var savedCamera by remember { mutableStateOf<CameraPosition?>(null) }
+    LaunchedEffect(selectedQuest) {
+        val sel = selectedQuest
+        if (sel != null) {
+            // capture once per selection CHAIN — not on reselect — so deselect returns to the origin.
+            if (savedCamera == null) savedCamera = cameraState.position
+            cameraState.animateTo(
+                boundingBox = sel.geometry.bounds.toGeoJsonBoundingBox(),
+                padding = focusPadding,
+                duration = 500.milliseconds,
+            )
+        } else {
+            savedCamera?.let { cameraState.animateTo(it, duration = 500.milliseconds) }
+            savedCamera = null
         }
     }
 
